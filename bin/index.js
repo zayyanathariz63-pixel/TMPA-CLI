@@ -12,7 +12,6 @@ function loadConfig() {
   if (fs.existsSync(CONFIG_FILE)) {
     try {
       const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-      // Pastikan endpoint selalu ada nilainya agar tidak undefined
       if (!data.endpoint) {
         data.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
       }
@@ -39,7 +38,8 @@ function showBanner() {
     ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝
  \x1b[0m───────────────────────────────────────────────────
   \x1b[32mThe Multi Platform AI [Interactive Mode]\x1b[0m
-  /config : Ubah API | /connect : Hubungkan Web | /uninstall : Hapus CLI | /exit : Keluar
+  /config : Ubah API | /connect : Hubungkan Web 
+  /uninstall : Hapus CLI | /exit : Keluar
  ───────────────────────────────────────────────────\n`);
 }
 
@@ -68,7 +68,6 @@ async function handleChat(prompt) {
     return askConfig(() => startPrompt());
   }
 
-  // Pastikan endpoint aman dari undefined
   if (!config.endpoint) {
     config.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
   }
