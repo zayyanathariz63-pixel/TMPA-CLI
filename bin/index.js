@@ -8,18 +8,19 @@ const { execSync } = require('child_process');
 
 const CONFIG_FILE = path.join(os.homedir(), '.tmpa_config.json');
 
-// Color Palette (TrueColor / ANSI Escape Codes)
-const COLOR = {
+// Exact RGB Gradient Colors (Cyan -> Light Blue -> Deep Blue -> Purple)
+const C = {
   reset: '\x1b[0m',
-  dim: '\x1b[2m',
-  bold: '\x1b[1m',
-  cyan: '\x1b[36m',
-  blue: '\x1b[38;2;59;130;246m',      // #3B82F6
-  purple: '\x1b[38;2;168;85;247m',    // #A855F7
-  green: '\x1b[38;2;34;197;94m',      // #22C55E
-  yellow: '\x1b[38;2;234;179;8m',     // #EAB308
-  red: '\x1b[38;2;239;68;68m',        // #EF4444
-  gray: '\x1b[38;2;100;116;139m'      // #64748B
+  c1: '\x1b[38;2;0;210;255m',   // Bright Cyan
+  c2: '\x1b[38;2;30;144;255m',  // Light Blue
+  c3: '\x1b[38;2;99;102;241m',  // Indigo Blue
+  c4: '\x1b[38;2;168;85;247m',  // Purple
+  green: '\x1b[38;2;34;197;94m',
+  cyan: '\x1b[38;2;6x;182;212m',
+  yellow: '\x1b[38;2;234;179;8m',
+  red: '\x1b[38;2;239;68;68m',
+  gray: '\x1b[38;2;148;163;184m',
+  darkGray: '\x1b[38;2;71;85;105m'
 };
 
 function loadConfig() {
@@ -44,20 +45,19 @@ function saveConfig(config) {
 function showBanner() {
   console.clear();
   
-  // ASCII Art Banner with Blue-to-Purple Gradient Effect
-  const line1 = `${COLOR.blue} ████████╗███╗   ███╗██████╗  █████╗ ${COLOR.reset}`;
-  const line2 = `${COLOR.blue} ╚══██╔══╝████╗ ████║██╔══██╗██╔══██╗${COLOR.reset}`;
-  const line3 = `${COLOR.blue}    ██║   ██╔████╔██║██████╔╝███████║${COLOR.reset}`;
-  const line4 = `${COLOR.purple}    ██║   ██║╚██╔╝██║██╔═══╝ ██╔══██║${COLOR.reset}`;
-  const line5 = `${COLOR.purple}    ██║   ██║ ╚═╝ ██║██║     ██║  ██║${COLOR.reset}`;
-  const line6 = `${COLOR.purple}    ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${COLOR.reset}`;
-
-  console.log(`\n${line1}\n${line2}\n${line3}\n${line4}\n${line5}\n${line6}`);
-  console.log(`${COLOR.gray}───────────────────────────────────────────────────${COLOR.reset}`);
-  console.log(`  ${COLOR.green}The Multi Platform AI [Interactive Mode]${COLOR.reset}`);
-  console.log(`  ${COLOR.gray}/config${COLOR.reset} : Set API Key | ${COLOR.gray}/connect${COLOR.reset} : Connect Web`);
-  console.log(`  ${COLOR.gray}/uninstall${COLOR.reset} : Remove CLI | ${COLOR.gray}/exit${COLOR.reset} : Exit Session`);
-  console.log(`${COLOR.gray}───────────────────────────────────────────────────${COLOR.reset}\n`);
+  // Exact Banner matching the image structure
+  console.log(`
+${C.c1}████████╗███╗   ███╗██████╗  █████╗ ${C.reset}
+${C.c2}╚══██╔══╝████╗ ████║██╔══██╗██╔══██╗${C.reset}
+${C.c2}   ██║   ██╔████╔██║██████╔╝███████║${C.reset}
+${C.c3}   ██║   ██║╚██╔╝██║██╔═══╝ ██╔══██║${C.reset}
+${C.c4}   ██║   ██║ ╚═╝ ██║██║     ██║  ██║${C.reset}
+${C.c4}   ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${C.reset}
+${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
+ ${C.reset}The Multi Platform AI ${C.green}[Interactive Mode]${C.reset}
+ ${C.gray}/config : Set API | /connect : Web Integration | /uninstall : Remove | /exit : Exit${C.reset}
+${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
+`);
 }
 
 const rl = readline.createInterface({
@@ -68,12 +68,12 @@ const rl = readline.createInterface({
 let config = loadConfig();
 
 function askConfig(callback) {
-  rl.question(`${COLOR.yellow}[>] Enter API Key:${COLOR.reset} `, (apiKey) => {
-    rl.question(`${COLOR.yellow}[>] Enter Endpoint URL (Press Enter for Default Gemini):${COLOR.reset} `, (endpoint) => {
+  rl.question(`${C.yellow}[>] Enter API Key:${C.reset} `, (apiKey) => {
+    rl.question(`${C.yellow}[>] Enter Endpoint URL (Press Enter for Default Gemini):${C.reset} `, (endpoint) => {
       config.apiKey = apiKey.trim();
       config.endpoint = endpoint.trim() || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
       saveConfig(config);
-      console.log(`${COLOR.green}[+] Configuration saved successfully!${COLOR.reset}\n`);
+      console.log(`${C.green}[+] Configuration saved successfully!${C.reset}\n`);
       if (callback) callback();
     });
   });
@@ -81,7 +81,7 @@ function askConfig(callback) {
 
 async function handleChat(prompt) {
   if (!config.apiKey) {
-    console.log(`${COLOR.yellow}[!] API Key is not set.${COLOR.reset}`);
+    console.log(`${C.yellow}[!] API Key is not set.${C.reset}`);
     return askConfig(() => startPrompt());
   }
 
@@ -89,7 +89,7 @@ async function handleChat(prompt) {
     config.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
   }
 
-  console.log(`${COLOR.yellow}TMPA CLI processing...${COLOR.reset}`);
+  console.log(`${C.yellow}TMPA CLI processing...${C.reset}`);
 
   try {
     const url = config.endpoint.includes('googleapis.com') 
@@ -117,43 +117,43 @@ async function handleChat(prompt) {
       reply = data.message;
     }
 
-    console.log(`\n${COLOR.blue}TMPA CLI :${COLOR.reset} ${reply}\n`);
+    console.log(`\n${C.c1}TMPA CLI :${C.reset} ${reply}\n`);
   } catch (error) {
-    console.log(`\n${COLOR.red}[x] Error: ${error.message}${COLOR.reset}\n`);
+    console.log(`\n${C.red}[x] Error: ${error.message}${C.reset}\n`);
   }
 
   startPrompt();
 }
 
 function handleUninstall() {
-  rl.question(`${COLOR.red}[!] Are you sure you want to uninstall TMPA CLI? (y/N):${COLOR.reset} `, (answer) => {
+  rl.question(`${C.red}[!] Are you sure you want to uninstall TMPA CLI? (y/N):${C.reset} `, (answer) => {
     if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
-      console.log(`\n${COLOR.yellow}[...] Removing TMPA CLI and cleaning configuration...${COLOR.reset}`);
+      console.log(`\n${C.yellow}[...] Removing TMPA CLI and cleaning configuration...${C.reset}`);
       try {
         if (fs.existsSync(CONFIG_FILE)) {
           fs.unlinkSync(CONFIG_FILE);
         }
-        console.log(`${COLOR.green}[+] Local configuration cleared.${COLOR.reset}`);
+        console.log(`${C.green}[+] Local configuration cleared.${C.reset}`);
         execSync('npm uninstall -g tmpa-cli', { stdio: 'inherit' });
-        console.log(`\n${COLOR.green}[+] TMPA CLI uninstalled successfully. Goodbye!${COLOR.reset}\n`);
+        console.log(`\n${C.green}[+] TMPA CLI uninstalled successfully. Goodbye!${C.reset}\n`);
         process.exit(0);
       } catch (err) {
-        console.log(`\n${COLOR.red}[x] Failed to uninstall automatically. Run: npm uninstall -g tmpa-cli manually.${COLOR.reset}\n`);
+        console.log(`\n${C.red}[x] Failed to uninstall automatically. Run: npm uninstall -g tmpa-cli manually.${C.reset}\n`);
         process.exit(0);
       }
     } else {
-      console.log(`${COLOR.gray}Uninstall process cancelled.${COLOR.reset}\n`);
+      console.log(`${C.gray}Uninstall process cancelled.${C.reset}\n`);
       startPrompt();
     }
   });
 }
 
 function startPrompt() {
-  rl.question(`${COLOR.cyan}TMPA >${COLOR.reset} `, (input) => {
+  rl.question(`${C.c1}TMPA >${C.reset} `, (input) => {
     const cmd = input.trim();
 
     if (cmd === '/exit') {
-      console.log(`${COLOR.gray}Goodbye!${COLOR.reset}`);
+      console.log(`${C.gray}Goodbye!${C.reset}`);
       process.exit(0);
     } else if (cmd === '/clear') {
       showBanner();
@@ -161,7 +161,7 @@ function startPrompt() {
     } else if (cmd === '/config') {
       askConfig(() => startPrompt());
     } else if (cmd === '/connect') {
-      console.log(`\n${COLOR.purple}[!] [COMING SOON] Web integration & auth login features will be available in the next release.${COLOR.reset}\n`);
+      console.log(`\n${C.c4}[!] [COMING SOON] Web integration & auth login features will be available in the next release.${C.reset}\n`);
       startPrompt();
     } else if (cmd === '/uninstall') {
       handleUninstall();
@@ -173,7 +173,7 @@ function startPrompt() {
   });
 }
 
-// Program Entry Point
+// Program Execution
 showBanner();
 if (!config.apiKey) {
   askConfig(() => startPrompt());
