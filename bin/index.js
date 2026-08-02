@@ -11,7 +11,12 @@ const CONFIG_FILE = path.join(os.homedir(), '.tmpa_config.json');
 function loadConfig() {
   if (fs.existsSync(CONFIG_FILE)) {
     try {
-      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+      const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+      // Pastikan endpoint selalu ada nilainya agar tidak undefined
+      if (!data.endpoint) {
+        data.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+      }
+      return data;
     } catch (e) {
       return {};
     }
@@ -61,6 +66,11 @@ async function handleChat(prompt) {
   if (!config.apiKey) {
     console.log('⚠️ API Key belum diset!');
     return askConfig(() => startPrompt());
+  }
+
+  // Pastikan endpoint aman dari undefined
+  if (!config.endpoint) {
+    config.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
   }
 
   console.log('\x1b[33mTMPA CLI memproses...\x1b[0m');
