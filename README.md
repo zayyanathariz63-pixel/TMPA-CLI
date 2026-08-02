@@ -77,6 +77,13 @@ tmpa-cli/
 ├── package.json      # npm package manifest
 └── README.md         # Official project documentation
 
+## 📌 Roadmap (Fitur Yang Akan Datang)
+
+- [ ] 🔐 **Sistem Login Integration**: Auth langsung dari CLI ke akun TMPA.
+- [ ] 🔗 **Perintah `/connect`**: Fitur interaktif untuk memilih dan terhubung ke berbagai endpoint/website TMPA secara langsung.
+- [ ] 🎨 **Tema UI Kustom**: Pilihan warna dan tampilan terminal.
+
+
 📄 License
 ​This project is licensed under the MIT License.
 ​👤 Developer
