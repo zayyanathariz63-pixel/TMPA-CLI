@@ -113,7 +113,7 @@ function handleUninstall() {
         process.exit(0);
       } catch (err) {
         console.log('\n❌ Gagal uninstall otomatis. Jalankan: npm uninstall -g tmpa-cli secara manual.\n');
-        startPrompt();
+        process.exit(0);
       }
     } else {
       console.log('Batal menghapus.\n');
