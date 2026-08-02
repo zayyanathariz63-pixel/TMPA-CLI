@@ -8,6 +8,20 @@ const { execSync } = require('child_process');
 
 const CONFIG_FILE = path.join(os.homedir(), '.tmpa_config.json');
 
+// Color Palette (TrueColor / ANSI Escape Codes)
+const COLOR = {
+  reset: '\x1b[0m',
+  dim: '\x1b[2m',
+  bold: '\x1b[1m',
+  cyan: '\x1b[36m',
+  blue: '\x1b[38;2;59;130;246m',      // #3B82F6
+  purple: '\x1b[38;2;168;85;247m',    // #A855F7
+  green: '\x1b[38;2;34;197;94m',      // #22C55E
+  yellow: '\x1b[38;2;234;179;8m',     // #EAB308
+  red: '\x1b[38;2;239;68;68m',        // #EF4444
+  gray: '\x1b[38;2;100;116;139m'      // #64748B
+};
+
 function loadConfig() {
   if (fs.existsSync(CONFIG_FILE)) {
     try {
@@ -29,18 +43,21 @@ function saveConfig(config) {
 
 function showBanner() {
   console.clear();
-  console.log(`\x1b[36m
- ████████╗███╗   ███╗██████╗  █████╗ 
- ╚══██╔══╝████╗ ████║██╔══██╗██╔══██╗
-    ██║   ██╔████╔██║██████╔╝███████║
-    ██║   ██║╚██╔╝██║██╔═══╝ ██╔══██║
-    ██║   ██║ ╚═╝ ██║██║     ██║  ██║
-    ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝
- \x1b[0m───────────────────────────────────────────────────
-  \x1b[32mThe Multi Platform AI [Interactive Mode]\x1b[0m
-  /config : Ubah API | /connect : Hubungkan Web 
-  /uninstall : Hapus CLI | /exit : Keluar
- ───────────────────────────────────────────────────\n`);
+  
+  // ASCII Art Banner with Blue-to-Purple Gradient Effect
+  const line1 = `${COLOR.blue} ████████╗███╗   ███╗██████╗  █████╗ ${COLOR.reset}`;
+  const line2 = `${COLOR.blue} ╚══██╔══╝████╗ ████║██╔══██╗██╔══██╗${COLOR.reset}`;
+  const line3 = `${COLOR.blue}    ██║   ██╔████╔██║██████╔╝███████║${COLOR.reset}`;
+  const line4 = `${COLOR.purple}    ██║   ██║╚██╔╝██║██╔═══╝ ██╔══██║${COLOR.reset}`;
+  const line5 = `${COLOR.purple}    ██║   ██║ ╚═╝ ██║██║     ██║  ██║${COLOR.reset}`;
+  const line6 = `${COLOR.purple}    ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${COLOR.reset}`;
+
+  console.log(`\n${line1}\n${line2}\n${line3}\n${line4}\n${line5}\n${line6}`);
+  console.log(`${COLOR.gray}───────────────────────────────────────────────────${COLOR.reset}`);
+  console.log(`  ${COLOR.green}The Multi Platform AI [Interactive Mode]${COLOR.reset}`);
+  console.log(`  ${COLOR.gray}/config${COLOR.reset} : Set API Key | ${COLOR.gray}/connect${COLOR.reset} : Connect Web`);
+  console.log(`  ${COLOR.gray}/uninstall${COLOR.reset} : Remove CLI | ${COLOR.gray}/exit${COLOR.reset} : Exit Session`);
+  console.log(`${COLOR.gray}───────────────────────────────────────────────────${COLOR.reset}\n`);
 }
 
 const rl = readline.createInterface({
@@ -51,12 +68,12 @@ const rl = readline.createInterface({
 let config = loadConfig();
 
 function askConfig(callback) {
-  rl.question('🔑 Masukkan API Key TMPA/Gemini: ', (apiKey) => {
-    rl.question('🌐 Masukkan Endpoint API (Tekan Enter untuk Default Gemini): ', (endpoint) => {
+  rl.question(`${COLOR.yellow}[>] Enter API Key:${COLOR.reset} `, (apiKey) => {
+    rl.question(`${COLOR.yellow}[>] Enter Endpoint URL (Press Enter for Default Gemini):${COLOR.reset} `, (endpoint) => {
       config.apiKey = apiKey.trim();
       config.endpoint = endpoint.trim() || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
       saveConfig(config);
-      console.log('✅ Konfigurasi berhasil disimpan!\n');
+      console.log(`${COLOR.green}[+] Configuration saved successfully!${COLOR.reset}\n`);
       if (callback) callback();
     });
   });
@@ -64,7 +81,7 @@ function askConfig(callback) {
 
 async function handleChat(prompt) {
   if (!config.apiKey) {
-    console.log('⚠️ API Key belum diset!');
+    console.log(`${COLOR.yellow}[!] API Key is not set.${COLOR.reset}`);
     return askConfig(() => startPrompt());
   }
 
@@ -72,7 +89,7 @@ async function handleChat(prompt) {
     config.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
   }
 
-  console.log('\x1b[33mTMPA CLI memproses...\x1b[0m');
+  console.log(`${COLOR.yellow}TMPA CLI processing...${COLOR.reset}`);
 
   try {
     const url = config.endpoint.includes('googleapis.com') 
@@ -90,7 +107,7 @@ async function handleChat(prompt) {
     });
 
     const data = await response.json();
-    let reply = 'Tidak ada respon dari server.';
+    let reply = 'No response from server.';
 
     if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
       reply = data.candidates[0].content.parts[0].text;
@@ -100,43 +117,43 @@ async function handleChat(prompt) {
       reply = data.message;
     }
 
-    console.log(`\n\x1b[34mTMPA CLI :\x1b[0m ${reply}\n`);
+    console.log(`\n${COLOR.blue}TMPA CLI :${COLOR.reset} ${reply}\n`);
   } catch (error) {
-    console.log(`\n❌ Error: ${error.message}\n`);
+    console.log(`\n${COLOR.red}[x] Error: ${error.message}${COLOR.reset}\n`);
   }
 
   startPrompt();
 }
 
 function handleUninstall() {
-  rl.question('⚠️ Apakah Anda yakin ingin menghapus TMPA CLI? (y/N): ', (answer) => {
-    if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'ya') {
-      console.log('\n⏳ Menghapus TMPA CLI dan konfigurasi...');
+  rl.question(`${COLOR.red}[!] Are you sure you want to uninstall TMPA CLI? (y/N):${COLOR.reset} `, (answer) => {
+    if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
+      console.log(`\n${COLOR.yellow}[...] Removing TMPA CLI and cleaning configuration...${COLOR.reset}`);
       try {
         if (fs.existsSync(CONFIG_FILE)) {
           fs.unlinkSync(CONFIG_FILE);
         }
-        console.log('✅ Konfigurasi lokal dibersihkan.');
+        console.log(`${COLOR.green}[+] Local configuration cleared.${COLOR.reset}`);
         execSync('npm uninstall -g tmpa-cli', { stdio: 'inherit' });
-        console.log('\n👋 TMPA CLI berhasil di-uninstall. Sampai jumpa!\n');
+        console.log(`\n${COLOR.green}[+] TMPA CLI uninstalled successfully. Goodbye!${COLOR.reset}\n`);
         process.exit(0);
       } catch (err) {
-        console.log('\n❌ Gagal uninstall otomatis. Jalankan: npm uninstall -g tmpa-cli secara manual.\n');
+        console.log(`\n${COLOR.red}[x] Failed to uninstall automatically. Run: npm uninstall -g tmpa-cli manually.${COLOR.reset}\n`);
         process.exit(0);
       }
     } else {
-      console.log('Batal menghapus.\n');
+      console.log(`${COLOR.gray}Uninstall process cancelled.${COLOR.reset}\n`);
       startPrompt();
     }
   });
 }
 
 function startPrompt() {
-  rl.question('\x1b[36mTMPA >\x1b[0m ', (input) => {
+  rl.question(`${COLOR.cyan}TMPA >${COLOR.reset} `, (input) => {
     const cmd = input.trim();
 
     if (cmd === '/exit') {
-      console.log('Sampai jumpa! 👋');
+      console.log(`${COLOR.gray}Goodbye!${COLOR.reset}`);
       process.exit(0);
     } else if (cmd === '/clear') {
       showBanner();
@@ -144,7 +161,7 @@ function startPrompt() {
     } else if (cmd === '/config') {
       askConfig(() => startPrompt());
     } else if (cmd === '/connect') {
-      console.log('\n🔗 [COMING SOON] Fitur login & integrasi website TMPA akan segera hadir pada update berikutnya!\n');
+      console.log(`\n${COLOR.purple}[!] [COMING SOON] Web integration & auth login features will be available in the next release.${COLOR.reset}\n`);
       startPrompt();
     } else if (cmd === '/uninstall') {
       handleUninstall();
@@ -156,7 +173,7 @@ function startPrompt() {
   });
 }
 
-// Jalankan Program
+// Program Entry Point
 showBanner();
 if (!config.apiKey) {
   askConfig(() => startPrompt());
