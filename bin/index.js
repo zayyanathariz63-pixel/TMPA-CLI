@@ -4,212 +4,153 @@ const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { execSync } = require('child_process');
 
-const CONFIG_PATH = path.join(os.homedir(), '.tmpa_config.json');
-const DEFAULT_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const CONFIG_FILE = path.join(os.homedir(), '.tmpa_config.json');
 
-const color = {
-  gray: (t) => `\x1b[90m${t}\x1b[0m`,
-  bold: (t) => `\x1b[1m${t}\x1b[0m`,
-  yellow: (t) => `\x1b[33m${t}\x1b[0m`,
-  green: (t) => `\x1b[32m${t}\x1b[0m`,
-  red: (t) => `\x1b[31m${t}\x1b[0m`,
-  rgb: (r, g, b, t) => `\x1b[38;2;${r};${g};${b}m${t}\x1b[0m`
-};
-
-function getConfig() {
-  try {
-    if (fs.existsSync(CONFIG_PATH)) {
-      return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+function loadConfig() {
+  if (fs.existsSync(CONFIG_FILE)) {
+    try {
+      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    } catch (e) {
+      return {};
     }
-  } catch (err) {
-    return null;
   }
-  return null;
+  return {};
 }
 
 function saveConfig(config) {
-  try {
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
-  } catch (err) {
-    console.error(color.red('Gagal menyimpan konfigurasi!'));
-  }
-}
-
-async function callTmpaApi(prompt, config) {
-  const apiKey = config.apiKey;
-  // Gunakan fallback defaultEndpoint jika config lama belum punya apiEndpoint
-  const apiEndpoint = config.apiEndpoint || DEFAULT_ENDPOINT;
-
-  if (apiEndpoint.includes('googleapis.com')) {
-    const url = apiEndpoint.includes('key=') ? apiEndpoint : `${apiEndpoint}?key=${apiKey}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error?.message || `HTTP Error ${response.status}`);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error('Respons kosong dari API.');
-    return text.trim();
-  } else {
-    const response = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'x-api-key': apiKey
-      },
-      body: JSON.stringify({ prompt: prompt, messages: [{ role: 'user', content: prompt }] })
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.message || errData.error || `HTTP Error ${response.status}`);
-    }
-
-    const data = await response.json();
-    const text = data.reply || data.response || data.choices?.[0]?.message?.content || data.text || (typeof data === 'string' ? data : JSON.stringify(data));
-    return String(text).trim();
-  }
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
 }
 
 function showBanner() {
   console.clear();
-  const logoLines = [
-    " ████████╗███╗   ███╗██████╗  █████╗ ",
-    " ╚══██╔══╝████╗ ████║██╔══██╗██╔══██╗",
-    "    ██║   ██╔████╔██║██████╔╝███████║",
-    "    ██║   ██║╚██╔╝██║██╔═══╝ ██╔══██║",
-    "    ██║   ██║ ╚═╝ ██║██║     ██║  ██║",
-    "    ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝"
-  ];
-  const colors = [[0, 210, 255], [35, 180, 252], [70, 150, 249], [105, 120, 246], [140, 90, 243], [180, 60, 240]];
-
-  console.log("");
-  logoLines.forEach((line, i) => {
-    const [r, g, b] = colors[i];
-    console.log(color.rgb(r, g, b, color.bold(line)));
-  });
-
-  console.log(color.gray(` ───────────────────────────────────────────────────`));
-  console.log(`  ${color.bold('The Multi Platform AI')} ${color.green('[Interactive Mode]')}`);
-  console.log(color.gray(`  /config : Ubah API | /clear : Hapus Layar | /exit : Keluar`));
-  console.log(color.gray(` ───────────────────────────────────────────────────\n`));
+  console.log(`\x1b[36m
+ ████████╗███╗   ███╗██████╗  █████╗ 
+ ╚══██╔══╝████╗ ████║██╔══██╗██╔══██╗
+    ██║   ██╔████╔██║██████╔╝███████║
+    ██║   ██║╚██╔╝██║██╔═══╝ ██╔══██║
+    ██║   ██║ ╚═╝ ██║██║     ██║  ██║
+    ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝
+ \x1b[0m───────────────────────────────────────────────────
+  \x1b[32mThe Multi Platform AI [Interactive Mode]\x1b[0m
+  /config : Ubah API | /connect : Hubungkan Web | /uninstall : Hapus CLI | /exit : Keluar
+ ───────────────────────────────────────────────────\n`);
 }
 
-function promptConfig(callback) {
-  console.clear();
-  console.log(color.rgb(0, 210, 255, color.bold('\n=== KONFIGURASI TMPA CLI ===\n')));
-  console.log('Masukkan pengaturan API milik kamu untuk melanjutkan.\n');
-  
-  const rlConfig = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
 
-  rlConfig.question(color.yellow('1. Masukkan API Key: '), (key) => {
-    const cleanKey = key.trim();
-    if (!cleanKey) {
-      console.log(color.red('API Key tidak boleh kosong!\n'));
-      rlConfig.close();
-      return promptConfig(callback);
-    }
+let config = loadConfig();
 
-    rlConfig.question(color.yellow(`2. Masukkan URL Endpoint API\n   (Tekan Enter untuk default Gemini API): `), (endpoint) => {
-      const cleanEndpoint = endpoint.trim() || DEFAULT_ENDPOINT;
-
-      saveConfig({
-        apiKey: cleanKey,
-        apiEndpoint: cleanEndpoint
-      });
-
-      console.log(color.green('\nKonfigurasi disimpan!'));
-      rlConfig.close();
-      setTimeout(callback, 1000);
+function askConfig(callback) {
+  rl.question('🔑 Masukkan API Key TMPA/Gemini: ', (apiKey) => {
+    rl.question('🌐 Masukkan Endpoint API (Tekan Enter untuk Default Gemini): ', (endpoint) => {
+      config.apiKey = apiKey.trim();
+      config.endpoint = endpoint.trim() || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+      saveConfig(config);
+      console.log('✅ Konfigurasi berhasil disimpan!\n');
+      if (callback) callback();
     });
   });
 }
 
-async function startInteractiveSession() {
-  const config = getConfig();
-
-  if (!config || !config.apiKey) {
-    promptConfig(startInteractiveSession);
-    return;
+async function handleChat(prompt) {
+  if (!config.apiKey) {
+    console.log('⚠️ API Key belum diset!');
+    return askConfig(() => startPrompt());
   }
 
-  showBanner();
+  console.log('\x1b[33mTMPA CLI memproses...\x1b[0m');
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    prompt: color.rgb(0, 210, 255, color.bold('TMPA > '))
-  });
+  try {
+    const url = config.endpoint.includes('googleapis.com') 
+      ? `${config.endpoint}?key=${config.apiKey}` 
+      : config.endpoint;
 
-  rl.prompt();
+    const bodyData = config.endpoint.includes('googleapis.com')
+      ? { contents: [{ parts: [{ text: prompt }] }] }
+      : { prompt: prompt, apiKey: config.apiKey };
 
-  rl.on('line', async (line) => {
-    const input = line.trim();
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyData)
+    });
 
-    if (input === '/exit' || input === 'exit') {
-      console.log(color.gray('\nSampai jumpa di TMPA CLI!\n'));
-      process.exit(0);
+    const data = await response.json();
+    let reply = 'Tidak ada respon dari server.';
+
+    if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+      reply = data.candidates[0].content.parts[0].text;
+    } else if (data.reply) {
+      reply = data.reply;
+    } else if (data.message) {
+      reply = data.message;
     }
 
-    if (input === '/clear' || input === 'clear') {
-      showBanner();
-      rl.prompt();
-      return;
+    console.log(`\n\x1b[34mTMPA CLI :\x1b[0m ${reply}\n`);
+  } catch (error) {
+    console.log(`\n❌ Error: ${error.message}\n`);
+  }
+
+  startPrompt();
+}
+
+function handleUninstall() {
+  rl.question('⚠️ Apakah Anda yakin ingin menghapus TMPA CLI? (y/N): ', (answer) => {
+    if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'ya') {
+      console.log('\n⏳ Menghapus TMPA CLI dan konfigurasi...');
+      try {
+        if (fs.existsSync(CONFIG_FILE)) {
+          fs.unlinkSync(CONFIG_FILE);
+        }
+        console.log('✅ Konfigurasi lokal dibersihkan.');
+        execSync('npm uninstall -g tmpa-cli', { stdio: 'inherit' });
+        console.log('\n👋 TMPA CLI berhasil di-uninstall. Sampai jumpa!\n');
+        process.exit(0);
+      } catch (err) {
+        console.log('\n❌ Gagal uninstall otomatis. Jalankan: npm uninstall -g tmpa-cli secara manual.\n');
+        startPrompt();
+      }
+    } else {
+      console.log('Batal menghapus.\n');
+      startPrompt();
     }
-
-    if (input === '/config') {
-      rl.close();
-      promptConfig(startInteractiveSession);
-      return;
-    }
-
-    if (input === '') {
-      rl.prompt();
-      return;
-    }
-
-    const loadingFrames = [
-      'TMPA CLI memproses.',
-      'TMPA CLI memproses..',
-      'TMPA CLI memproses...',
-      'TMPA CLI memproses..'
-    ];
-
-    let frameIndex = 0;
-    const loadingInterval = setInterval(() => {
-      readline.cursorTo(process.stdout, 0);
-      process.stdout.write(color.gray(loadingFrames[frameIndex]));
-      frameIndex = (frameIndex + 1) % loadingFrames.length;
-    }, 250);
-
-    let answer = "";
-    try {
-      answer = await callTmpaApi(input, config);
-    } catch (error) {
-      answer = color.red(`Error: ${error.message}`);
-    } finally {
-      clearInterval(loadingInterval);
-      readline.cursorTo(process.stdout, 0);
-      readline.clearLine(process.stdout, 0);
-    }
-
-    console.log(`${color.bold('TMPA CLI :')} ${answer}\n`);
-    rl.prompt();
   });
 }
 
-startInteractiveSession();
+function startPrompt() {
+  rl.question('\x1b[36mTMPA >\x1b[0m ', (input) => {
+    const cmd = input.trim();
+
+    if (cmd === '/exit') {
+      console.log('Sampai jumpa! 👋');
+      process.exit(0);
+    } else if (cmd === '/clear') {
+      showBanner();
+      startPrompt();
+    } else if (cmd === '/config') {
+      askConfig(() => startPrompt());
+    } else if (cmd === '/connect') {
+      console.log('\n🔗 [COMING SOON] Fitur login & integrasi website TMPA akan segera hadir pada update berikutnya!\n');
+      startPrompt();
+    } else if (cmd === '/uninstall') {
+      handleUninstall();
+    } else if (cmd === '') {
+      startPrompt();
+    } else {
+      handleChat(cmd);
+    }
+  });
+}
+
+// Jalankan Program
+showBanner();
+if (!config.apiKey) {
+  askConfig(() => startPrompt());
+} else {
+  startPrompt();
+}
