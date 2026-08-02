@@ -1,0 +1,4 @@
+node_modules/
+.tmpa_config.json
+.DS_Store
+*.log
