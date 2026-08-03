@@ -24,19 +24,19 @@
 Make sure you have **Node.js** (v18+) installed in your terminal. Run the following global command:
 
 ```bash
-npm install -g tmpa-cli
+npm install -g tmpa-cli```
 
 2. Installation via GitHub
 ​You can also install directly from the GitHub repository:
 
-npm install -g git+[https://github.com/zayyanathariz63-pixel/TMPA-CLI.git](https://github.com/zayyanathariz63-pixel/TMPA-CLI.git)
+```bash 
+npm install -g git+[https://github.com/zayyanathariz63-pixel/TMPA-CLI.git](https://github.com/zayyanathariz63-pixel/TMPA-CLI.git)```
 
 🚀 Usage
 ​Once installed, simply open your terminal and type:
 
-bash :
-tmpa
-
+```bash
+tmpa```
 🔑 First-Time Setup
 ​When you run the application for the first time, you will be prompted to enter:
 
@@ -49,9 +49,9 @@ tmpa
 ​While inside the TMPA > chat session, you can use the following control commands:
 
 Command Description
-/config --> Update or change stored API Key and API Endpoint
-/clear --> Clear the terminal screen and display the main banner
-/exit --> Exit the TMPA CLI application
+```/config``` --> Update or change stored API Key and API Endpoint
+```/clear``` --> Clear the terminal screen and display the main banner
+```/exit``` --> Exit the TMPA CLI application
 
 Preview Example :
  ████████╗███╗   ███╗██████╗  █████╗ 
@@ -64,6 +64,20 @@ Preview Example :
   The Multi Platform AI [Interactive Mode]
   /config : Change API | /clear : Clear Screen | /exit : Exit
  ───────────────────────────────────────────────────
+
+
+## 📦 Prerequisites
+
+Make sure you have **Node.js** (`v18.0.0` or higher) installed in your system:
+
+```bash
+node -```
+
+If you are using Termux (Android), you can install or update Node.js v18+ using:
+
+```Bash
+pkg update && pkg install nodejs-lts -y```
+
 
 TMPA > hello, who are you?
 TMPA CLI processing...
