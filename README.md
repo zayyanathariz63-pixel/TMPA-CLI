@@ -93,8 +93,7 @@ brew install node
 
 node.js :
 ```bash
-node -v
-```
+node -v```
 
 npm :
 ```bash
