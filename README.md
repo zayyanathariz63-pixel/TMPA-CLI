@@ -56,6 +56,7 @@ Command Description
 /clear--> Clear the terminal screen and display the main banner
 /exit --> Exit the TMPA CLI application
 
+
 Preview Example :
  ████████╗███╗   ███╗██████╗  █████╗ 
  ╚══██╔══╝████╗ ████║██╔══██╗██╔══██╗
