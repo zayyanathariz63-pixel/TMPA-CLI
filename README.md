@@ -52,12 +52,9 @@ tmpa
 ​While inside the TMPA > chat session, you can use the following control commands:
 
 Command Description
-```/config
-``` --> Update or change stored API Key and API Endpoint
-```/clear
-``` --> Clear the terminal screen and display the main banner
-```/exit
-``` --> Exit the TMPA CLI application
+/config--> Update or change stored API Key and API Endpoint
+/clear--> Clear the terminal screen and display the main banner
+/exit --> Exit the TMPA CLI application
 
 Preview Example :
  ████████╗███╗   ███╗██████╗  █████╗ 
@@ -76,9 +73,33 @@ Preview Example :
 
 Make sure you have **Node.js** (`v18.0.0` or higher) installed in your system:
 
+windows :
 ```bash
-node -
+winget install OpenJS.NodeJS
 ```
+
+Linux :
+```bash
+sudo apt update
+sudo apt install nodejs npm
+```
+
+3. macOS :
+```bash 
+brew install node
+```
+
+🔍 How to Check the Installation Results: Once the process is complete, close and reopen your terminal, then type the following command to verify that npm is installed:
+
+node.js :
+```bash
+node -v
+
+npm :
+```bash
+npm -v
+```
+
 
 If you are using Termux (Android), you can install or update Node.js v18+ using:
 
