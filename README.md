@@ -94,6 +94,7 @@ brew install node
 node.js :
 ```bash
 node -v
+```
 
 npm :
 ```bash
