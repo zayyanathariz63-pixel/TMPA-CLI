@@ -8,13 +8,12 @@ const { execSync } = require('child_process');
 
 const CONFIG_FILE = path.join(os.homedir(), '.tmpa_config.json');
 
-// Exact RGB Gradient Colors (Cyan -> Light Blue -> Deep Blue -> Purple)
 const C = {
   reset: '\x1b[0m',
-  c1: '\x1b[38;2;0;210;255m',   // Bright Cyan
-  c2: '\x1b[38;2;30;144;255m',  // Light Blue
-  c3: '\x1b[38;2;99;102;241m',  // Indigo Blue
-  c4: '\x1b[38;2;168;85;247m',  // Purple
+  c1: '\x1b[38;2;0;210;255m',
+  c2: '\x1b[38;2;30;144;255m',
+  c3: '\x1b[38;2;99;102;241m',
+  c4: '\x1b[38;2;168;85;247m',
   green: '\x1b[38;2;34;197;94m',
   cyan: '\x1b[38;2;6x;182;212m',
   yellow: '\x1b[38;2;234;179;8m',
@@ -26,11 +25,7 @@ const C = {
 function loadConfig() {
   if (fs.existsSync(CONFIG_FILE)) {
     try {
-      const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-      if (!data.endpoint) {
-        data.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-      }
-      return data;
+      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
     } catch (e) {
       return {};
     }
@@ -44,8 +39,6 @@ function saveConfig(config) {
 
 function showBanner() {
   console.clear();
-  
-  // Exact Banner matching the image structure
   console.log(`
 ${C.c1}████████╗███╗   ███╗██████╗  █████╗ ${C.reset}
 ${C.c2}╚══██╔══╝████╗ ████║██╔══██╗██╔══██╗${C.reset}
@@ -85,18 +78,16 @@ async function handleChat(prompt) {
     return askConfig(() => startPrompt());
   }
 
-  if (!config.endpoint) {
-    config.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-  }
+  const defaultEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  const targetEndpoint = config.endpoint || defaultEndpoint;
 
   console.log(`${C.yellow}TMPA CLI processing...${C.reset}`);
 
   try {
-    const url = config.endpoint.includes('googleapis.com') 
-      ? `${config.endpoint}?key=${config.apiKey}` 
-      : config.endpoint;
+    const isGoogle = targetEndpoint.includes('googleapis.com');
+    const url = isGoogle ? `${targetEndpoint}?key=${config.apiKey}` : targetEndpoint;
 
-    const bodyData = config.endpoint.includes('googleapis.com')
+    const bodyData = isGoogle
       ? { contents: [{ parts: [{ text: prompt }] }] }
       : { prompt: prompt, apiKey: config.apiKey };
 
@@ -107,19 +98,16 @@ async function handleChat(prompt) {
     });
 
     const data = await response.json();
-    let reply = 'No response from server.';
 
     if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-      reply = data.candidates[0].content.parts[0].text;
-    } else if (data.reply) {
-      reply = data.reply;
-    } else if (data.message) {
-      reply = data.message;
+      console.log(`\n${C.c1}TMPA CLI :${C.reset} ${data.candidates[0].content.parts[0].text}\n`);
+    } else if (data.error) {
+      console.log(`\n${C.red}[x] API Error: ${data.error.message || JSON.stringify(data.error)}${C.reset}\n`);
+    } else {
+      console.log(`\n${C.red}[x] Response: ${JSON.stringify(data)}${C.reset}\n`);
     }
-
-    console.log(`\n${C.c1}TMPA CLI :${C.reset} ${reply}\n`);
   } catch (error) {
-    console.log(`\n${C.red}[x] Error: ${error.message}${C.reset}\n`);
+    console.log(`\n${C.red}[x] Fetch Error: ${error.message}${C.reset}\n`);
   }
 
   startPrompt();
