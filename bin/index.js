@@ -58,7 +58,7 @@ ${C.c4}   ██║   ██║ ╚═╝ ██║██║     ██║  █�
 ${C.c4}   ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
  ${C.reset}The Multi Platform AI ${C.green}[Interactive Mode]${C.reset}
- ${C.gray}/config : Set API | /models : Interactive Model Selector | /uninstall : Remove | /exit : Exit${C.reset}
+ ${C.gray}/config : Set API | /models : View & Select Models | /uninstall : Remove | /exit : Exit${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
 `);
 }
@@ -109,81 +109,80 @@ function askConfig(callback) {
   });
 }
 
-function renderInteractiveMenu(models, selectedIndex, pageOffset, pageSize) {
-  console.clear();
-  console.log(`${C.cyan}=== Select Model for ${config.provider} ===${C.reset}`);
-  console.log(`${C.gray}Use Up/Down Arrow keys to navigate, press ENTER to select.${C.reset}`);
-  console.log(`${C.darkGray}────────────────────────────────────────────────────────────${C.reset}`);
+function selectModelCLI(allModels) {
+  let filteredModels = [...allModels];
+  let currentPage = 0;
+  const pageSize = 12;
 
-  const visibleModels = models.slice(pageOffset, pageOffset + pageSize);
+  function displayList() {
+    console.clear();
+    const totalPages = Math.ceil(filteredModels.length / pageSize) || 1;
+    if (currentPage >= totalPages) currentPage = totalPages - 1;
+    if (currentPage < 0) currentPage = 0;
 
-  visibleModels.forEach((m, idx) => {
-    const realIndex = pageOffset + idx;
-    const isSelected = realIndex === selectedIndex;
-    const bullet = isSelected ? `${C.green}●${C.reset}` : `${C.gray}○${C.reset}`;
-    const modelText = isSelected ? `${C.green}${C.c1}${m.id}${C.reset}` : `${C.gray}${m.id}${C.reset}`;
-    console.log(` ${bullet} ${modelText}`);
-  });
+    const startIdx = currentPage * pageSize;
+    const pageItems = filteredModels.slice(startIdx, startIdx + pageSize);
 
-  console.log(`${C.darkGray}────────────────────────────────────────────────────────────${C.reset}`);
-  console.log(`${C.yellow}Item ${selectedIndex + 1} of ${models.length}${C.reset} ${C.darkGray}| Current Active: ${config.model}${C.reset}\n`);
-}
+    console.log(`${C.cyan}=== Models Selector for ${config.provider} (${filteredModels.length} models) ===${C.reset}`);
+    console.log(`${C.gray}Current Active: ${C.green}${config.model || 'None'}${C.reset}`);
+    console.log(`${C.darkGray}────────────────────────────────────────────────────────────${C.reset}`);
 
-async function interactiveModelSelect(models) {
-  let selectedIndex = 0;
-  let pageOffset = 0;
-  const pageSize = 10; // Menampilkan 10 item per halaman agar rapi
-
-  // Matikan readline sementara untuk mengaktifkan keypress listener
-  rl.close();
-  readline.emitKeypressEvents(process.stdin);
-  if (process.stdin.isTTY) process.stdin.setRawMode(true);
-
-  renderInteractiveMenu(models, selectedIndex, pageOffset, pageSize);
-
-  return new Promise((resolve) => {
-    const onKeypress = (str, key) => {
-      if (key.name === 'up') {
-        if (selectedIndex > 0) {
-          selectedIndex--;
-          if (selectedIndex < pageOffset) pageOffset--;
-        }
-        renderInteractiveMenu(models, selectedIndex, pageOffset, pageSize);
-      } else if (key.name === 'down') {
-        if (selectedIndex < models.length - 1) {
-          selectedIndex++;
-          if (selectedIndex >= pageOffset + pageSize) pageOffset++;
-        }
-        renderInteractiveMenu(models, selectedIndex, pageOffset, pageSize);
-      } else if (key.name === 'return' || key.name === 'enter') {
-        cleanup();
-        const chosen = models[selectedIndex].id;
-        config.model = chosen;
-        saveConfig(config);
-        console.log(`\n${C.green}[+] Successfully switched to model: ${config.model}${C.reset}\n`);
-        resolve();
-      } else if (key.ctrl && key.name === 'c') {
-        cleanup();
-        process.exit(0);
-      } else if (key.name === 'escape') {
-        cleanup();
-        console.log(`\n${C.gray}Model selection cancelled.${C.reset}\n`);
-        resolve();
-      }
-    };
-
-    function cleanup() {
-      process.stdin.removeListener('keypress', onKeypress);
-      if (process.stdin.isTTY) process.stdin.setRawMode(false);
-      // Restart readline interface untuk percakapan selanjutnya
-      rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
+    if (pageItems.length === 0) {
+      console.log(`${C.red} No models found matching filter.${C.reset}`);
+    } else {
+      pageItems.forEach((m, idx) => {
+        const itemNum = startIdx + idx + 1;
+        const isCurrent = m.id === config.model;
+        const bullet = isCurrent ? `${C.green}●${C.reset}` : `${C.gray}○${C.reset}`;
+        console.log(` ${bullet} ${C.yellow}${itemNum.toString().padStart(3, ' ')}.${C.reset} ${m.id}`);
       });
     }
 
-    process.stdin.on('keypress', onKeypress);
-  });
+    console.log(`${C.darkGray}────────────────────────────────────────────────────────────${C.reset}`);
+    console.log(`${C.cyan}Page ${currentPage + 1}/${totalPages}${C.reset} | ${C.gray}Commands: [n]ext | [p]rev | [f]ilter <keyword> | [q]uit${C.reset}`);
+
+    rl.question(`\n${C.yellow}[>] Enter Number / Model ID / Command:${C.reset} `, (answer) => {
+      const input = answer.trim();
+
+      if (input.toLowerCase() === 'n') {
+        if (currentPage < totalPages - 1) currentPage++;
+        displayList();
+      } else if (input.toLowerCase() === 'p') {
+        if (currentPage > 0) currentPage--;
+        displayList();
+      } else if (input.toLowerCase() === 'q' || input.toLowerCase() === 'exit') {
+        console.log(`${C.gray}Model selection cancelled.${C.reset}\n`);
+        startPrompt();
+      } else if (input.toLowerCase().startsWith('f ')) {
+        const query = input.slice(2).trim().toLowerCase();
+        filteredModels = allModels.filter(m => m.id.toLowerCase().includes(query));
+        currentPage = 0;
+        displayList();
+      } else if (!isNaN(input) && input !== '') {
+        const num = parseInt(input);
+        if (num >= 1 && num <= filteredModels.length) {
+          const selected = filteredModels[num - 1].id;
+          config.model = selected;
+          saveConfig(config);
+          console.log(`\n${C.green}[+] Model changed to: ${config.model}${C.reset}\n`);
+          startPrompt();
+        } else {
+          console.log(`${C.red}[x] Invalid number!${C.reset}`);
+          setTimeout(displayList, 1000);
+        }
+      } else if (input.length > 0) {
+        // Jika memasukkan nama model spesifik secara langsung
+        config.model = input;
+        saveConfig(config);
+        console.log(`\n${C.green}[+] Custom Model ID set to: ${config.model}${C.reset}\n`);
+        startPrompt();
+      } else {
+        startPrompt();
+      }
+    });
+  }
+
+  displayList();
 }
 
 async function fetchAvailableModels() {
@@ -214,8 +213,7 @@ async function fetchAvailableModels() {
     const data = await response.json();
 
     if (data.data && Array.isArray(data.data) && data.data.length > 0) {
-      await interactiveModelSelect(data.data);
-      startPrompt();
+      selectModelCLI(data.data);
     } else {
       console.log(`${C.red}[x] Could not retrieve models list automatically from ${config.provider}.${C.reset}`);
       startPrompt();
