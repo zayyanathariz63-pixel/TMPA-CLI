@@ -58,12 +58,12 @@ ${C.c4}   ██║   ██║ ╚═╝ ██║██║     ██║  █�
 ${C.c4}   ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
  ${C.reset}The Multi Platform AI ${C.green}[Interactive Mode]${C.reset}
- ${C.gray}/config : Set API | /models : View & Select Models | /uninstall : Remove | /exit : Exit${C.reset}
+ ${C.gray}/config : Set API | /models : Interactive Model Selector | /uninstall : Remove | /exit : Exit${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
 `);
 }
 
-const rl = readline.createInterface({
+let rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
@@ -102,11 +102,87 @@ function askConfig(callback) {
         config.endpoint = selected.endpoint;
         config.model = selected.defaultModel;
         saveConfig(config);
-        console.log(`${C.green}[+] Connected to ${selected.name}. Default model: ${selected.defaultModel}${C.reset}`);
-        console.log(`${C.gray}(Tip: Run /models anytime to see all available models or type a custom model ID)${C.reset}\n`);
+        console.log(`${C.green}[+] Connected to ${selected.name}. Default model: ${selected.defaultModel}${C.reset}\n`);
         if (callback) callback();
       }
     });
+  });
+}
+
+function renderInteractiveMenu(models, selectedIndex, pageOffset, pageSize) {
+  console.clear();
+  console.log(`${C.cyan}=== Select Model for ${config.provider} ===${C.reset}`);
+  console.log(`${C.gray}Use Up/Down Arrow keys to navigate, press ENTER to select.${C.reset}`);
+  console.log(`${C.darkGray}────────────────────────────────────────────────────────────${C.reset}`);
+
+  const visibleModels = models.slice(pageOffset, pageOffset + pageSize);
+
+  visibleModels.forEach((m, idx) => {
+    const realIndex = pageOffset + idx;
+    const isSelected = realIndex === selectedIndex;
+    const bullet = isSelected ? `${C.green}●${C.reset}` : `${C.gray}○${C.reset}`;
+    const modelText = isSelected ? `${C.green}${C.c1}${m.id}${C.reset}` : `${C.gray}${m.id}${C.reset}`;
+    console.log(` ${bullet} ${modelText}`);
+  });
+
+  console.log(`${C.darkGray}────────────────────────────────────────────────────────────${C.reset}`);
+  console.log(`${C.yellow}Item ${selectedIndex + 1} of ${models.length}${C.reset} ${C.darkGray}| Current Active: ${config.model}${C.reset}\n`);
+}
+
+async function interactiveModelSelect(models) {
+  let selectedIndex = 0;
+  let pageOffset = 0;
+  const pageSize = 10; // Menampilkan 10 item per halaman agar rapi
+
+  // Matikan readline sementara untuk mengaktifkan keypress listener
+  rl.close();
+  readline.emitKeypressEvents(process.stdin);
+  if (process.stdin.isTTY) process.stdin.setRawMode(true);
+
+  renderInteractiveMenu(models, selectedIndex, pageOffset, pageSize);
+
+  return new Promise((resolve) => {
+    const onKeypress = (str, key) => {
+      if (key.name === 'up') {
+        if (selectedIndex > 0) {
+          selectedIndex--;
+          if (selectedIndex < pageOffset) pageOffset--;
+        }
+        renderInteractiveMenu(models, selectedIndex, pageOffset, pageSize);
+      } else if (key.name === 'down') {
+        if (selectedIndex < models.length - 1) {
+          selectedIndex++;
+          if (selectedIndex >= pageOffset + pageSize) pageOffset++;
+        }
+        renderInteractiveMenu(models, selectedIndex, pageOffset, pageSize);
+      } else if (key.name === 'return' || key.name === 'enter') {
+        cleanup();
+        const chosen = models[selectedIndex].id;
+        config.model = chosen;
+        saveConfig(config);
+        console.log(`\n${C.green}[+] Successfully switched to model: ${config.model}${C.reset}\n`);
+        resolve();
+      } else if (key.ctrl && key.name === 'c') {
+        cleanup();
+        process.exit(0);
+      } else if (key.name === 'escape') {
+        cleanup();
+        console.log(`\n${C.gray}Model selection cancelled.${C.reset}\n`);
+        resolve();
+      }
+    };
+
+    function cleanup() {
+      process.stdin.removeListener('keypress', onKeypress);
+      if (process.stdin.isTTY) process.stdin.setRawMode(false);
+      // Restart readline interface untuk percakapan selanjutnya
+      rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
+    }
+
+    process.stdin.on('keypress', onKeypress);
   });
 }
 
@@ -116,12 +192,12 @@ async function fetchAvailableModels() {
     return startPrompt();
   }
 
-  console.log(`${C.yellow}[...] Fetching full model list from ${config.provider || 'Provider'}...${C.reset}`);
+  console.log(`${C.yellow}[...] Fetching models list from ${config.provider || 'Provider'}...${C.reset}`);
 
   try {
     let url = config.endpoint;
     if (url.includes('googleapis.com')) {
-      console.log(`${C.yellow}[!] Gemini Default REST API uses endpoint-defined model: ${config.model}${C.reset}\n`);
+      console.log(`${C.yellow}[!] Gemini Default REST API uses fixed model: ${config.model}${C.reset}\n`);
       return startPrompt();
     }
 
@@ -137,50 +213,12 @@ async function fetchAvailableModels() {
 
     const data = await response.json();
 
-    if (data.data && Array.isArray(data.data)) {
-      console.log(`\n${C.cyan}=== Available Models for ${config.provider} (${data.data.length} total) ===${C.reset}`);
-      
-      // Ambil hingga 50 model populer/teratas untuk tampilan cepat
-      const displayedModels = data.data.slice(0, 50);
-      displayedModels.forEach((m, idx) => {
-        const num = (idx + 1).toString().padStart(2, ' ');
-        console.log(` ${C.yellow}${num}.${C.reset} ${m.id}`);
-      });
-
-      if (data.data.length > 50) {
-        console.log(`${C.gray}... and ${data.data.length - 50} more models available on ${config.provider}.${C.reset}`);
-      }
-
-      console.log(`${C.darkGray}------------------------------------------------------------${C.reset}`);
-      console.log(`${C.gray}Current active model: ${C.green}${config.model}${C.reset}`);
-      
-      rl.question(`\n${C.yellow}[>] Enter number (1-${displayedModels.length}) OR type specific Model ID (e.g. meta/llama-3.1-70b-instruct):${C.reset} `, (input) => {
-        const val = input.trim();
-        if (!val) {
-          console.log(`${C.gray}Keeping current model: ${config.model}${C.reset}\n`);
-        } else if (!isNaN(val) && parseInt(val) >= 1 && parseInt(val) <= displayedModels.length) {
-          const selectedModel = displayedModels[parseInt(val) - 1].id;
-          config.model = selectedModel;
-          saveConfig(config);
-          console.log(`${C.green}[+] Model updated to: ${config.model}${C.reset}\n`);
-        } else {
-          // User memasukkan ID kustom/spesifik sendiri
-          config.model = val;
-          saveConfig(config);
-          console.log(`${C.green}[+] Custom Model ID saved: ${config.model}${C.reset}\n`);
-        }
-        startPrompt();
-      });
+    if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+      await interactiveModelSelect(data.data);
+      startPrompt();
     } else {
       console.log(`${C.red}[x] Could not retrieve models list automatically from ${config.provider}.${C.reset}`);
-      rl.question(`${C.yellow}[>] Enter specific Model ID manually:${C.reset} `, (manualModel) => {
-        if (manualModel.trim()) {
-          config.model = manualModel.trim();
-          saveConfig(config);
-          console.log(`${C.green}[+] Model updated to: ${config.model}${C.reset}\n`);
-        }
-        startPrompt();
-      });
+      startPrompt();
     }
   } catch (err) {
     console.log(`${C.red}[x] Error fetching models: ${err.message}${C.reset}\n`);
