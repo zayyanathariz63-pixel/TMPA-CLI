@@ -39,15 +39,13 @@ const PROVIDERS = {
   '3': { name: 'NVIDIA NIM', endpoint: 'https://integrate.api.nvidia.com/v1', defaultModel: 'meta/llama-3.1-70b-instruct' },
   '4': { name: 'OpenAI', endpoint: 'https://api.openai.com/v1', defaultModel: 'gpt-4o-mini' },
   '5': { name: 'Anthropic', endpoint: 'https://api.anthropic.com/v1', defaultModel: 'claude-3-5-haiku-20241022' },
-  '6': { name: 'Google Gemini', endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', defaultModel: 'gemini-2.5-flash' },
+  '6': { name: 'Google Gemini', endpoint: 'https://generativelanguage.googleapis.com/v1beta', defaultModel: 'gemini-2.5-flash' },
   '7': { name: 'Custom / Auto-Detect', endpoint: '', defaultModel: '' }
 };
 
 // 100+ POPULAR MCP PRESETS LIST
 const MCP_PRESETS = [
   { id: 'custom', name: '🛠️ Custom / Lainnya', category: 'General', type: 'custom', desc: 'Input Manual Name, Target, & Key' },
-  
-  // Cloud, AI & UI
   { id: 'google-stitch', name: '⚡ Google Stitch', category: 'Cloud & AI', type: 'direct-api', endpoint: 'https://stitch.googleapis.com/v1', reqAuth: 'GOOGLE_STITCH_API_KEY', desc: 'UI & App Prototyping MCP by Google' },
   { id: 'supabase', name: '⚡ Supabase MCP', category: 'Cloud & AI', type: 'direct-api', endpoint: 'https://api.supabase.com/mcp', reqAuth: 'SUPABASE_ACCESS_TOKEN', desc: 'Database, Auth & Storage Management' },
   { id: 'cloudflare-workers', name: '☁️ Cloudflare Workers', category: 'Cloud & AI', type: 'stdio', command: 'npx -y @cloudflare/mcp-server-cloudflare', reqAuth: 'CLOUDFLARE_API_TOKEN', desc: 'Deploy & manage edge functions' },
@@ -56,30 +54,22 @@ const MCP_PRESETS = [
   { id: 'firebase', name: '🔥 Firebase MCP', category: 'Cloud & AI', type: 'stdio', command: 'npx -y firebase-mcp-server', reqAuth: 'FIREBASE_TOKEN', desc: 'Firestore, Auth & Realtime DB' },
   { id: 'huggingface', name: '🤗 HuggingFace Spaces', category: 'Cloud & AI', type: 'direct-api', endpoint: 'https://huggingface.co/api/mcp', reqAuth: 'HF_TOKEN', desc: 'Run open-source AI models & spaces' },
   { id: 'replicate', name: '🌀 Replicate MCP', category: 'Cloud & AI', type: 'stdio', command: 'npx -y @replicate/mcp-server', reqAuth: 'REPLICATE_API_TOKEN', desc: 'Run image/video AI generation models' },
-  
-  // Developer Tools & VCS
   { id: 'github', name: '🐙 GitHub Official', category: 'Developer Tools', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-github', reqAuth: 'GITHUB_PERSONAL_ACCESS_TOKEN', desc: 'Repository, Issues, PRs & Gists' },
   { id: 'gitlab', name: '🦊 GitLab MCP', category: 'Developer Tools', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-gitlab', reqAuth: 'GITLAB_PERSONAL_ACCESS_TOKEN', desc: 'GitLab projects & CI/CD pipelines' },
   { id: 'postman', name: '🚀 Postman MCP', category: 'Developer Tools', type: 'stdio', command: 'npx -y @postman/mcp-server', reqAuth: 'POSTMAN_API_KEY', desc: 'API Collection testing & documentation' },
   { id: 'sentry', name: '🛡️ Sentry Error Tracker', category: 'Developer Tools', type: 'stdio', command: 'npx -y @sentry/mcp-server', reqAuth: 'SENTRY_AUTH_TOKEN', desc: 'Inspect application bugs & stacktraces' },
   { id: 'docker', name: '🐳 Docker Local MCP', category: 'Developer Tools', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-docker', desc: 'Manage local containers & images' },
-
-  // Databases & Storage
   { id: 'postgresql', name: '🗄️ PostgreSQL', category: 'Databases', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-postgres', reqAuth: 'DATABASE_URL', desc: 'Direct SQL query execution' },
   { id: 'mysql', name: '🐬 MySQL MCP', category: 'Databases', type: 'stdio', command: 'npx -y mysql-mcp-server', reqAuth: 'MYSQL_CONNECTION_STRING', desc: 'MySQL relational database runner' },
   { id: 'sqlite', name: '📦 SQLite Local', category: 'Databases', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-sqlite', desc: 'Lightweight local database query tool' },
   { id: 'mongodb', name: '🍃 MongoDB MCP', category: 'Databases', type: 'stdio', command: 'npx -y mongodb-mcp-server', reqAuth: 'MONGODB_URI', desc: 'NoSQL collection queries & aggregation' },
   { id: 'redis', name: '🔴 Redis Cache', category: 'Databases', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-redis', reqAuth: 'REDIS_URL', desc: 'Key-value data structure store' },
   { id: 'pinecone', name: '🌲 Pinecone Vector DB', category: 'Databases', type: 'direct-api', endpoint: 'https://api.pinecone.io/mcp', reqAuth: 'PINECONE_API_KEY', desc: 'Vector database for AI embeddings' },
-
-  // Search & Web Scraping
   { id: 'brave-search', name: '🦁 Brave Search', category: 'Search & Scraping', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-brave-search', reqAuth: 'BRAVE_API_KEY', desc: 'Real-time global web search engine' },
   { id: 'tavily', name: '🔍 Tavily AI Search', category: 'Search & Scraping', type: 'stdio', command: 'npx -y tavily-mcp', reqAuth: 'TAVILY_API_KEY', desc: 'Optimized search engine for LLMs' },
   { id: 'puppeteer', name: '🌐 Puppeteer Scraper', category: 'Search & Scraping', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-puppeteer', desc: 'Headless browser web automation & screenshot' },
   { id: 'firecrawl', name: '🔥 Firecrawl Scraper', category: 'Search & Scraping', type: 'direct-api', endpoint: 'https://api.firecrawl.dev/v1/mcp', reqAuth: 'FIRECRAWL_API_KEY', desc: 'Convert entire websites to clean Markdown' },
   { id: 'fetch', name: '📡 Fetch HTTP Utility', category: 'Search & Scraping', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-fetch', desc: 'HTTP request & web page parser' },
-
-  // Productivity & Communication
   { id: 'notion', name: '📄 Notion Workspace', category: 'Productivity', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-notion', reqAuth: 'NOTION_API_TOKEN', desc: 'Read & edit Notion pages and databases' },
   { id: 'slack', name: '💬 Slack Channel', category: 'Productivity', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-slack', reqAuth: 'SLACK_BOT_TOKEN', desc: 'Send messages & read channels' },
   { id: 'discord', name: '🎮 Discord Bot MCP', category: 'Productivity', type: 'stdio', command: 'npx -y discord-mcp-server', reqAuth: 'DISCORD_BOT_TOKEN', desc: 'Interact with Discord servers & channels' },
@@ -135,7 +125,7 @@ ${C.c4}   ██║   ██║ ╚═╝ ██║██║     ██║  █�
 ${C.c4}   ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
  ${C.reset}The Multi Platform AI ${C.green}[MCP Hub & Interactive Provider Engine]${C.reset}
- ${C.gray}/config | /models | /skill | /mcp | /new-mcp | /scan | /uninstall | /exit${C.reset}
+ ${C.gray}/config | /models | /custom-models | /skill | /mcp | /new-mcp | /scan | /uninstall${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
 `);
 }
@@ -369,9 +359,10 @@ function interactiveProviderSelector(allItems, onSelect, onCancel) {
   renderMenu();
 }
 
-// INTERACTIVE ARROW-KEY SELECTOR UNTUK MODEL AI (/models)
+// INTERACTIVE ARROW-KEY SELECTOR UNTUK MODEL AI (/models) - CAPACITY HINGGA 600 MODEL
 function interactiveModelSelector(allModels, onSelect, onCancel) {
-  let filteredModels = [...allModels];
+  // Cap pada 600 model untuk mencegah lag ekstrem di memori Termux
+  let filteredModels = allModels.slice(0, 600);
   let selectedIndex = 0;
   let currentPage = 0;
   const pageSize = 10;
@@ -417,9 +408,9 @@ function interactiveModelSelector(allModels, onSelect, onCancel) {
     }
 
     console.log(`\n${C.darkGray}────────────────────────────────────────────────────────────${C.reset}`);
-    console.log(`${C.cyan}Halaman ${currentPage + 1}/${totalPages}${C.reset} | Total: ${filteredModels.length} Model AI`);
-    console.log(`${C.gray}🎮 Navigasi: [▲/▼] Panah Termux/Keyboard | [Enter] Pilih${C.reset}`);
-    console.log(`${C.gray}⌨️  Atau: [f] Cari Nama Model | [n] Next | [p] Prev | [q] Batal${C.reset}`);
+    console.log(`${C.cyan}Halaman ${currentPage + 1}/${totalPages}${C.reset} | Total Model Loaded: ${filteredModels.length}`);
+    console.log(`${C.gray}🎮 Navigasi: [▲/▼] Panah Termux | [Enter] Pilih${C.reset}`);
+    console.log(`${C.gray}⌨️  [f] Cari Nama Model | [n] Next | [p] Prev | [q] Batal${C.reset}`);
     console.log(`${C.darkGray}────────────────────────────────────────────────────────────${C.reset}\n`);
   }
 
@@ -464,9 +455,9 @@ function interactiveModelSelector(allModels, onSelect, onCancel) {
       renderMenu();
     } else if (str === 'f' || str === 'F') {
       cleanup();
-      rl.question(`\n${C.yellow}[>] Ketik kata kunci nama model (misal: llama, gemini, claude):${C.reset} `, (query) => {
+      rl.question(`\n${C.yellow}[>] Ketik nama/filter model (misal: llama, gemini, claude, qwen):${C.reset} `, (query) => {
         const q = query.trim().toLowerCase();
-        filteredModels = allModels.filter(m => m.id.toLowerCase().includes(q));
+        filteredModels = allModels.filter(m => m.id.toLowerCase().includes(q)).slice(0, 600);
         currentPage = 0;
         selectedIndex = 0;
         interactiveModelSelector(filteredModels, onSelect, onCancel);
@@ -485,7 +476,6 @@ function createNewMCPWizard(callback) {
     (selectedProvider) => {
       console.clear();
 
-      // CASE 1: CUSTOM MCP INPUT MANUAL
       if (selectedProvider.id === 'custom') {
         console.log(`\n${C.cyan}=== 🛠️ SETUP MCP MANUAL (CUSTOM) ===${C.reset}\n`);
         rl.question(`${C.yellow}[1/4] Masukkan Nama MCP Server (misal: my-mcp):${C.reset} `, (nameInput) => {
@@ -530,9 +520,7 @@ function createNewMCPWizard(callback) {
             });
           });
         });
-      } 
-      // CASE 2: PRESET PROVIDER POPULER
-      else {
+      } else {
         console.log(`\n${C.cyan}=== ⚡ SETUP PROVIDER: ${selectedProvider.name} ===${C.reset}`);
         console.log(`${C.gray}${selectedProvider.desc}${C.reset}\n`);
 
@@ -719,7 +707,7 @@ function askConfig(callback) {
   console.log(` ${C.yellow}3.${C.reset} NVIDIA NIM`);
   console.log(` ${C.yellow}4.${C.reset} OpenAI`);
   console.log(` ${C.yellow}5.${C.reset} Anthropic`);
-  console.log(` ${C.yellow}6.${C.reset} Google Gemini (Default)`);
+  console.log(` ${C.yellow}6.${C.reset} Google Gemini`);
   console.log(` ${C.yellow}7.${C.reset} Custom / Auto-Detect Endpoint\n`);
 
   rl.question(`${C.yellow}[>] Select Provider (1-7):${C.reset} `, (choice) => {
@@ -751,6 +739,7 @@ function askConfig(callback) {
   });
 }
 
+// PERBAIKAN FETCH ALL MODELS UNIVERSAL UNTUK SEMUA PROVIDER
 async function fetchAvailableModels() {
   if (!config.apiKey) {
     console.log(`${C.red}[x] API Key is not set. Use /config first.${C.reset}\n`);
@@ -761,26 +750,46 @@ async function fetchAvailableModels() {
 
   try {
     let url = config.endpoint;
+    let fetchUrl = '';
+    let headers = {};
+
+    // 1. Google Gemini Native Models Fetch
     if (url.includes('googleapis.com')) {
-      console.log(`${C.yellow}[!] Gemini Default REST API uses fixed model: ${config.model}${C.reset}\n`);
-      return startPrompt();
-    }
-
-    let modelsUrl = url.endsWith('/models') ? url : `${url.replace(/\/chat\/completions$/, '')}/models`;
-
-    const response = await fetch(modelsUrl, {
-      method: 'GET',
-      headers: {
+      fetchUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`;
+    } 
+    // 2. Anthropic Direct Fetch (jika endpoint anthropic)
+    else if (url.includes('anthropic.com')) {
+      fetchUrl = 'https://api.anthropic.com/v1/models';
+      headers = {
+        'x-api-key': config.apiKey,
+        'anthropic-version': '2023-06-01'
+      };
+    } 
+    // 3. OpenRouter, Groq, NVIDIA, OpenAI & Custom Universal OpenAI Standard
+    else {
+      let baseUrl = url.replace(/\/chat\/completions$/, '').replace(/\/$/, '');
+      fetchUrl = baseUrl.endsWith('/models') ? baseUrl : `${baseUrl}/models`;
+      headers = {
         'Authorization': `Bearer ${config.apiKey}`,
         'Content-Type': 'application/json'
-      }
-    });
+      };
+    }
 
+    const response = await fetch(fetchUrl, { method: 'GET', headers: headers });
     const data = await response.json();
 
-    if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+    let extractedModels = [];
+
+    // Parsing fleksibel dari berbagai bentuk JSON provider
+    if (data.data && Array.isArray(data.data)) {
+      extractedModels = data.data.map(m => ({ id: typeof m === 'string' ? m : (m.id || m.name) }));
+    } else if (data.models && Array.isArray(data.models)) {
+      extractedModels = data.models.map(m => ({ id: typeof m === 'string' ? m : (m.name?.replace('models/', '') || m.id) }));
+    }
+
+    if (extractedModels.length > 0) {
       interactiveModelSelector(
-        data.data,
+        extractedModels,
         (selectedModelId) => {
           config.model = selectedModelId;
           saveConfig(config);
@@ -795,13 +804,35 @@ async function fetchAvailableModels() {
         }
       );
     } else {
-      console.log(`${C.red}[x] Could not retrieve models list automatically from ${config.provider}.${C.reset}`);
+      console.log(`${C.red}[x] Gagal mengambil daftar model secara otomatis dari ${config.provider}.${C.reset}`);
+      console.log(`${C.yellow}💡 Tips: Gunakan perintah ${C.bold}/custom-models${C.reset}${C.yellow} untuk menginput nama model secara manual dengan presisi.${C.reset}\n`);
       startPrompt();
     }
   } catch (err) {
-    console.log(`${C.red}[x] Error fetching models: ${err.message}${C.reset}\n`);
+    console.log(`${C.red}[x] Error fetching models: ${err.message}${C.reset}`);
+    console.log(`${C.yellow}💡 Kamu bisa menggunakan perintah ${C.bold}/custom-models${C.reset}${C.yellow} untuk memasukkan nama model manual.${C.reset}\n`);
     startPrompt();
   }
+}
+
+// PERINTAH BARU: /custom-models UNTUK PRESISI NAMA MODEL
+function handleCustomModels() {
+  console.log(`\n${C.cyan}=== 🎯 SET CUSTOM MODEL (PRESISI HIGH-PRECISION) ===${C.reset}`);
+  console.log(`${C.gray}Provider Aktif : ${C.yellow}${config.provider || 'Belum diatur'}${C.reset}`);
+  console.log(`${C.gray}Model Saat Ini : ${C.green}${config.model || 'Belum diatur'}${C.reset}\n`);
+
+  rl.question(`${C.yellow}[>] Masukkan ID / Nama Model secara presisi sesuai provider:${C.reset} `, (inputModel) => {
+    const cleanModel = inputModel.trim();
+    if (!cleanModel) {
+      console.log(`${C.red}[x] Nama model tidak boleh kosong.${C.reset}\n`);
+      return startPrompt();
+    }
+
+    config.model = cleanModel;
+    saveConfig(config);
+    console.log(`\n${C.green}[✔] Model berhasil diperbarui secara presisi ke: ${C.bold}${config.model}${C.reset}\n`);
+    startPrompt();
+  });
 }
 
 async function handleChat(prompt, forcedTool = null) {
@@ -825,7 +856,8 @@ async function handleChat(prompt, forcedTool = null) {
     const fullPrompt = (prompt || "Jalankan instruksi tool ini.") + toolsContext;
 
     if (url.includes('googleapis.com')) {
-      url = `${url}?key=${config.apiKey}`;
+      const activeModel = config.model || 'gemini-2.5-flash';
+      url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${config.apiKey}`;
       bodyData = { contents: [{ parts: [{ text: fullPrompt }] }] };
     } else {
       if (!url.endsWith('/chat/completions')) {
@@ -848,7 +880,6 @@ async function handleChat(prompt, forcedTool = null) {
 
     let aiResponse = "";
 
-    // DUKUNGAN UNTUK REASONING MODELS & STANDAR OPENAI/GEMINI
     if (data.choices && data.choices[0] && data.choices[0].message) {
       const msg = data.choices[0].message;
       aiResponse = msg.content || msg.reasoning || msg.reasoning_content || "";
@@ -908,6 +939,8 @@ function startPrompt() {
       askConfig(() => startPrompt());
     } else if (cmd === '/models') {
       fetchAvailableModels();
+    } else if (cmd === '/custom-models') {
+      handleCustomModels();
     } else if (cmd === '/skill' || cmd === '/skills') {
       listSkills();
       startPrompt();
