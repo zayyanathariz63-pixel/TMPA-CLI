@@ -4,7 +4,7 @@ const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { execSync, spawn } = require('child_process');
+const { execSync } = require('child_process');
 
 // Base Paths
 const TMPA_DIR = path.join(os.homedir(), '.tmpa');
@@ -43,7 +43,6 @@ const PROVIDERS = {
   '7': { name: 'Custom / Auto-Detect', endpoint: '', defaultModel: '' }
 };
 
-// Config & Registry Helpers
 function loadConfig() {
   if (fs.existsSync(CONFIG_FILE)) {
     try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch (e) { return {}; }
@@ -66,7 +65,6 @@ function saveRegistry(registry) {
   fs.writeFileSync(REGISTRY_FILE, JSON.stringify(registry, null, 2));
 }
 
-// UI Popup Card Helper
 function drawBox(title, contentLines, borderColor = C.cyan) {
   const width = 64;
   console.log(`${borderColor}┌${'─'.repeat(width - 2)}┐${C.reset}`);
@@ -92,47 +90,88 @@ ${C.c3}   ██║   ██║╚██╔╝██║██╔═══╝ █
 ${C.c4}   ██║   ██║ ╚═╝ ██║██║     ██║  ██║${C.reset}
 ${C.c4}   ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
- ${C.reset}The Multi Platform AI ${C.green}[Dynamic Tool Slash Engine]${C.reset}
+ ${C.reset}The Multi Platform AI ${C.green}[Isolated Tool Execution Engine]${C.reset}
  ${C.gray}/config | /models | /skill | /mcp | /connect | /scan | /exit${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
 `);
 }
 
-// Dynamic System Context Builder
-function getActiveToolsContext(forcedTool = null) {
-  let contextParts = [];
+// Helper untuk membaca isi file skill/MCP secara otomatis
+function readResourceContent(targetPath) {
+  if (!fs.existsSync(targetPath)) return "[Resource file/directory not found on local system]";
 
-  if (forcedTool) {
-    contextParts.push(`[CRITICAL INSTRUCTION: FORCED TOOL EXECUTION]`);
-    contextParts.push(`User explicitly called tool command: /${forcedTool.type}-${forcedTool.name}`);
-    contextParts.push(`Target Path/URL: ${forcedTool.target}`);
-    contextParts.push(`You MUST use and invoke this ${forcedTool.type.toUpperCase()} tool to handle user prompt below.\n`);
+  const stat = fs.statSync(targetPath);
+  if (stat.isFile()) {
+    try {
+      return fs.readFileSync(targetPath, 'utf8');
+    } catch (e) {
+      return `[Error reading file: ${e.message}]`;
+    }
+  } else if (stat.isDirectory()) {
+    // Cari file instruksi utama seperti SKILL.md, README.md, index.js, prompt.txt
+    const candidateFiles = ['SKILL.md', 'skill.md', 'PROMPT.md', 'README.md', 'index.js', 'index.ts', 'main.py'];
+    for (const file of candidateFiles) {
+      const full = path.join(targetPath, file);
+      if (fs.existsSync(full)) {
+        try {
+          return `--- Content from ${file} ---\n` + fs.readFileSync(full, 'utf8');
+        } catch (e) {}
+      }
+    }
+
+    // Jika tidak ada file markdown/skrip khusus, baca beberapa file pertama
+    try {
+      const files = fs.readdirSync(targetPath);
+      let combinedText = `Directory Contents for ${path.basename(targetPath)}:\n`;
+      files.slice(0, 5).forEach(f => {
+        const fp = path.join(targetPath, f);
+        if (fs.statSync(fp).isFile()) {
+          combinedText += `\n--- File: ${f} ---\n` + fs.readFileSync(fp, 'utf8').slice(0, 2000);
+        }
+      });
+      return combinedText;
+    } catch (e) {
+      return `[Directory found at ${targetPath}, but unable to parse files]`;
+    }
   }
-  
+  return "[Unknown resource format]";
+}
+
+// System Context Builder dengan ISOLASI KETAT
+function getActiveToolsContext(forcedTool = null) {
+  // 1. Jika User Memanggil Tool Khusus (Misal: /skill-remotion-video)
+  if (forcedTool) {
+    const rawContent = readResourceContent(forcedTool.target);
+    
+    return `\n\n[STRICT TOOL EXECUTION SYSTEM DIRECTIVE]
+YOU ARE NOW STRICTLY ACTING AS THE FOLLOWING ${forcedTool.type.toUpperCase()} TOOL: "${forcedTool.name}".
+DO NOT REFER TO OTHER TOOLS OR GENERAL ASSISTANT CAPABILITIES. FOCUS 100% ON EXECUTING THIS TOOL INSTRUCTION.
+
+--- TOOL INSTRUCTION & CODE CONTENT ---
+${rawContent}
+--- END TOOL INSTRUCTION ---
+
+Executing User Prompt under this tool context only:\n`;
+  }
+
+  // 2. Jika Chat Biasa (Tanpa Slash Specific Tool), tampilkan ringkasan umum
+  let contextParts = [];
   const activeSkills = Object.keys(registry.skills || {});
   if (activeSkills.length > 0) {
-    contextParts.push("AVAILABLE SKILLS:");
-    activeSkills.forEach(name => {
-      const s = registry.skills[name];
-      contextParts.push(`- /skill-${name} -> Path: ${s.path}`);
-    });
+    contextParts.push("AVAILABLE SKILLS (Use /skill-<name> to invoke directly):");
+    activeSkills.forEach(name => contextParts.push(`- /skill-${name}`));
   }
 
   const activeMCP = Object.keys(registry.mcp || {});
   if (activeMCP.length > 0) {
-    contextParts.push("AVAILABLE MCP SERVERS:");
-    activeMCP.forEach(name => {
-      const m = registry.mcp[name];
-      contextParts.push(`- /mcp-${name} -> Target: ${m.target} (${m.type})`);
-    });
+    contextParts.push("AVAILABLE MCP SERVERS (Use /mcp-<name> to invoke directly):");
+    activeMCP.forEach(name => contextParts.push(`- /mcp-${name}`));
   }
 
   if (contextParts.length === 0) return "";
-
-  return "\n\n[SYSTEM CONTEXT: REGISTERED TOOLS & PROTOCOLS]\n" + contextParts.join("\n") + "\n";
+  return "\n\n[SYSTEM ENVIRONMENT SUMMARY]\n" + contextParts.join("\n") + "\n";
 }
 
-// Handlers for Skills with Dynamic Command Helper
 function listSkills() {
   console.log(`\n${C.cyan}=== Registered Skills ===${C.reset}`);
   const keys = Object.keys(registry.skills || {});
@@ -148,9 +187,8 @@ function listSkills() {
   });
   console.log('');
 
-  // Interactive Action Helper Popup with dynamic slash commands
   const lines = [
-    `${C.bold}Perintah Instan yang Bisa Kamu Ketik Langsung:${C.reset}`,
+    `${C.bold}Perintah Instan (Fokus 100% Khusus Tool Tersebut):${C.reset}`,
     ``
   ];
 
@@ -158,16 +196,12 @@ function listSkills() {
     lines.push(` ${C.yellow}/skill-${name}${C.reset} <prompt kamu>`);
   });
 
-  lines.push(``);
-  lines.push(`${C.gray}Contoh: ${C.yellow}/skill-${keys[0]} buatkan animasi intro${C.reset}`);
-
   drawBox("⚡ COMMAND INSTAN SKILL TERSEDIA", lines, C.c1);
   console.log('');
 }
 
-// Handlers for MCP with Dynamic Command Helper
 function listMCP() {
-  console.log(`\n${C.cyan}=== Registered MCP (Model Context Protocol) Servers ===${C.reset}`);
+  console.log(`\n${C.cyan}=== Registered MCP Servers ===${C.reset}`);
   const keys = Object.keys(registry.mcp || {});
 
   if (keys.length === 0) {
@@ -181,18 +215,14 @@ function listMCP() {
   });
   console.log('');
 
-  // Interactive Action Helper Popup with dynamic slash commands
   const lines = [
-    `${C.bold}Perintah Instan MCP yang Bisa Kamu Ketik Langsung:${C.reset}`,
+    `${C.bold}Perintah Instan MCP (Fokus Khusus Tool MCP):${C.reset}`,
     ``
   ];
 
   keys.forEach(name => {
     lines.push(` ${C.yellow}/mcp-${name}${C.reset} <prompt kamu>`);
   });
-
-  lines.push(``);
-  lines.push(`${C.gray}Contoh: ${C.yellow}/mcp-${keys[0]} sinkronkan file terbaru${C.reset}`);
 
   drawBox("🔌 COMMAND INSTAN MCP TERSEDIA", lines, C.c4);
   console.log('');
@@ -509,7 +539,7 @@ async function handleChat(prompt, forcedTool = null) {
       return startPrompt();
     }
 
-    console.log(`\n${C.c1}TMPA CLI (${config.model || 'AI'}) :${C.reset} ${aiResponse}\n`);
+    console.log(`\n${C.c1}TMPA CLI (${config.model || 'AI'}) :${C.reset}\n${aiResponse}\n`);
 
   } catch (error) {
     console.log(`\n${C.red}[x] Fetch Error: ${error.message}${C.reset}\n`);
@@ -570,8 +600,7 @@ function startPrompt() {
     } else if (cmd === '/uninstall') {
       handleUninstall();
     } else if (cmd.startsWith('/skill-')) {
-      // Dynamic Slash Command for Skill: /skill-remotion-vidio <prompt>
-      const fullCmd = cmd.slice(7).trim(); // remove '/skill-'
+      const fullCmd = cmd.slice(7).trim();
       const spaceIdx = fullCmd.indexOf(' ');
       let skillName = fullCmd;
       let userPrompt = '';
@@ -588,8 +617,7 @@ function startPrompt() {
         startPrompt();
       }
     } else if (cmd.startsWith('/mcp-')) {
-      // Dynamic Slash Command for MCP: /mcp-stitch <prompt>
-      const fullCmd = cmd.slice(5).trim(); // remove '/mcp-'
+      const fullCmd = cmd.slice(5).trim();
       const spaceIdx = fullCmd.indexOf(' ');
       let mcpName = fullCmd;
       let userPrompt = '';
