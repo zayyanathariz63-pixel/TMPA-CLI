@@ -90,13 +90,12 @@ ${C.c3}   ██║   ██║╚██╔╝██║██╔═══╝ █
 ${C.c4}   ██║   ██║ ╚═╝ ██║██║     ██║  ██║${C.reset}
 ${C.c4}   ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
- ${C.reset}The Multi Platform AI ${C.green}[Isolated Tool Execution Engine]${C.reset}
- ${C.gray}/config | /models | /skill | /mcp | /connect | /scan | /exit${C.reset}
+ ${C.reset}The Multi Platform AI ${C.green}[MCP Hub & Tool Engine]${C.reset}
+ ${C.gray}/config | /models | /skill | /mcp | /new-mcp | /scan | /exit${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
 `);
 }
 
-// Helper untuk membaca isi file skill/MCP secara otomatis
 function readResourceContent(targetPath) {
   if (!fs.existsSync(targetPath)) return "[Resource file/directory not found on local system]";
 
@@ -108,7 +107,6 @@ function readResourceContent(targetPath) {
       return `[Error reading file: ${e.message}]`;
     }
   } else if (stat.isDirectory()) {
-    // Cari file instruksi utama seperti SKILL.md, README.md, index.js, prompt.txt
     const candidateFiles = ['SKILL.md', 'skill.md', 'PROMPT.md', 'README.md', 'index.js', 'index.ts', 'main.py'];
     for (const file of candidateFiles) {
       const full = path.join(targetPath, file);
@@ -119,7 +117,6 @@ function readResourceContent(targetPath) {
       }
     }
 
-    // Jika tidak ada file markdown/skrip khusus, baca beberapa file pertama
     try {
       const files = fs.readdirSync(targetPath);
       let combinedText = `Directory Contents for ${path.basename(targetPath)}:\n`;
@@ -137,11 +134,18 @@ function readResourceContent(targetPath) {
   return "[Unknown resource format]";
 }
 
-// System Context Builder dengan ISOLASI KETAT
 function getActiveToolsContext(forcedTool = null) {
-  // 1. Jika User Memanggil Tool Khusus (Misal: /skill-remotion-video)
   if (forcedTool) {
-    const rawContent = readResourceContent(forcedTool.target);
+    let rawContent = "";
+    if (forcedTool.type === 'mcp') {
+      rawContent = `MCP Server Info:
+Name: ${forcedTool.name}
+Target/Endpoint: ${forcedTool.target}
+Type: ${forcedTool.mcpType || 'HTTP/SSE'}
+Auth Token: ${forcedTool.authToken ? 'Provided' : 'None'}`;
+    } else {
+      rawContent = readResourceContent(forcedTool.target);
+    }
     
     return `\n\n[STRICT TOOL EXECUTION SYSTEM DIRECTIVE]
 YOU ARE NOW STRICTLY ACTING AS THE FOLLOWING ${forcedTool.type.toUpperCase()} TOOL: "${forcedTool.name}".
@@ -154,22 +158,103 @@ ${rawContent}
 Executing User Prompt under this tool context only:\n`;
   }
 
-  // 2. Jika Chat Biasa (Tanpa Slash Specific Tool), tampilkan ringkasan umum
   let contextParts = [];
   const activeSkills = Object.keys(registry.skills || {});
   if (activeSkills.length > 0) {
-    contextParts.push("AVAILABLE SKILLS (Use /skill-<name> to invoke directly):");
+    contextParts.push("AVAILABLE SKILLS:");
     activeSkills.forEach(name => contextParts.push(`- /skill-${name}`));
   }
 
   const activeMCP = Object.keys(registry.mcp || {});
   if (activeMCP.length > 0) {
-    contextParts.push("AVAILABLE MCP SERVERS (Use /mcp-<name> to invoke directly):");
+    contextParts.push("AVAILABLE MCP SERVERS:");
     activeMCP.forEach(name => contextParts.push(`- /mcp-${name}`));
   }
 
   if (contextParts.length === 0) return "";
   return "\n\n[SYSTEM ENVIRONMENT SUMMARY]\n" + contextParts.join("\n") + "\n";
+}
+
+// RUANGAN KHUSUS MCP CENTER
+function showMCPHub() {
+  console.log(`\n${C.c4}============================================================${C.reset}`);
+  console.log(`${C.c4}          🔌 MCP (MODEL CONTEXT PROTOCOL) CENTER           ${C.reset}`);
+  console.log(`${C.c4}============================================================${C.reset}\n`);
+
+  const keys = Object.keys(registry.mcp || {});
+
+  if (keys.length === 0) {
+    console.log(`${C.yellow}  [!] Belum ada MCP Server yang terhubung saat ini.${C.reset}`);
+    console.log(`${C.gray}      Gunakan perintah ${C.green}/new-mcp${C.gray} untuk mendaftarkan MCP baru.${C.reset}\n`);
+  } else {
+    console.log(`${C.bold}Daftar MCP Server Aktif:${C.reset}`);
+    keys.forEach((name, i) => {
+      const m = registry.mcp[name];
+      const typeBadge = m.type === 'remote' ? `${C.cyan}[Remote SSE/HTTP]${C.reset}` : `${C.green}[Local Stdio]${C.reset}`;
+      console.log(` ${C.yellow}${i + 1}.${C.reset} ${C.bold}${name}${C.reset} ${typeBadge}`);
+      console.log(`    ↳ Target: ${C.gray}${m.target}${C.reset}`);
+      if (m.authToken) console.log(`    ↳ Auth  : ${C.green}Encrypted/Token set${C.reset}`);
+    });
+    console.log('');
+  }
+
+  const lines = [
+    `${C.bold}Command Instan MCP:${C.reset}`,
+    `${C.yellow}/new-mcp${C.reset}           👉 Tambah MCP Server Baru (Wizard)`,
+    `${C.yellow}/mcp-<nama>${C.reset} <prompt> 👉 Eksekusi MCP secara spesifik`,
+    `${C.yellow}/scan${C.reset}              👉 Pindai folder .mcp otomatis`
+  ];
+
+  drawBox("💡 PETUNJUK RUANG MCP", lines, C.c4);
+  console.log('');
+}
+
+// WIZARD KONFIGURASI MCP BARU (/new-mcp)
+function createNewMCPWizard(callback) {
+  console.log(`\n${C.cyan}=== 🛠️ SETUP MCP (MODEL CONTEXT PROTOCOL) BARU ===${C.reset}\n`);
+
+  rl.question(`${C.yellow}[1/4] Masukkan Nama MCP Server (misal: stitch, github, filesystem):${C.reset} `, (nameInput) => {
+    const mcpName = nameInput.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!mcpName) {
+      console.log(`${C.red}[x] Nama MCP tidak boleh kosong.${C.reset}\n`);
+      return callback();
+    }
+
+    console.log(`\n${C.cyan}Pilih Tipe Koneksi MCP:${C.reset}`);
+    console.log(`  ${C.yellow}1.${C.reset} Remote URL / SSE Endpoint (misal: https://mcp.example.com/sse)`);
+    console.log(`  ${C.yellow}2.${C.reset} Local Command / File Path (misal: npx -y @modelcontextprotocol/server-filesystem)`);
+
+    rl.question(`\n${C.yellow}[2/4] Pilih Tipe (1/2):${C.reset} `, (typeChoice) => {
+      const isRemote = typeChoice.trim() === '1';
+
+      rl.question(`${C.yellow}[3/4] Masukkan Target URL / Command Path:${C.reset} `, (targetInput) => {
+        const target = targetInput.trim();
+        if (!target) {
+          console.log(`${C.red}[x] Target tidak boleh kosong.${C.reset}\n`);
+          return callback();
+        }
+
+        rl.question(`${C.yellow}[4/4] Masukkan Auth Token / API Key (Tekan Enter jika tidak ada):${C.reset} `, (tokenInput) => {
+          const authToken = tokenInput.trim();
+
+          registry.mcp = registry.mcp || {};
+          registry.mcp[mcpName] = {
+            target: target,
+            type: isRemote ? 'remote' : 'local',
+            authToken: authToken || null,
+            connectedAt: new Date().toISOString(),
+            status: 'Connected'
+          };
+
+          saveRegistry(registry);
+
+          console.log(`\n${C.green}[✔] MCP Server "${mcpName}" berhasil ditambahkan!${C.reset}`);
+          console.log(`${C.gray}Gunakan perintah instan: ${C.yellow}/mcp-${mcpName} <prompt kamu>${C.reset}\n`);
+          callback();
+        });
+      });
+    });
+  });
 }
 
 function listSkills() {
@@ -188,7 +273,7 @@ function listSkills() {
   console.log('');
 
   const lines = [
-    `${C.bold}Perintah Instan (Fokus 100% Khusus Tool Tersebut):${C.reset}`,
+    `${C.bold}Perintah Instan Skill:${C.reset}`,
     ``
   ];
 
@@ -197,34 +282,6 @@ function listSkills() {
   });
 
   drawBox("⚡ COMMAND INSTAN SKILL TERSEDIA", lines, C.c1);
-  console.log('');
-}
-
-function listMCP() {
-  console.log(`\n${C.cyan}=== Registered MCP Servers ===${C.reset}`);
-  const keys = Object.keys(registry.mcp || {});
-
-  if (keys.length === 0) {
-    console.log(`${C.gray}Belum ada MCP server terhubung. Ketik ${C.yellow}/scan${C.gray} atau ${C.yellow}/connect mcp <target>${C.reset}\n`);
-    return;
-  }
-
-  keys.forEach((name, i) => {
-    const item = registry.mcp[name];
-    console.log(` ${C.yellow}${i + 1}.${C.reset} ${C.green}${name}${C.reset} -> ${C.gray}${item.target}${C.reset} [${item.type}]`);
-  });
-  console.log('');
-
-  const lines = [
-    `${C.bold}Perintah Instan MCP (Fokus Khusus Tool MCP):${C.reset}`,
-    ``
-  ];
-
-  keys.forEach(name => {
-    lines.push(` ${C.yellow}/mcp-${name}${C.reset} <prompt kamu>`);
-  });
-
-  drawBox("🔌 COMMAND INSTAN MCP TERSEDIA", lines, C.c4);
   console.log('');
 }
 
@@ -589,8 +646,10 @@ function startPrompt() {
       listSkills();
       startPrompt();
     } else if (cmd === '/mcp') {
-      listMCP();
+      showMCPHub();
       startPrompt();
+    } else if (cmd === '/new-mcp') {
+      createNewMCPWizard(() => startPrompt());
     } else if (cmd.startsWith('/connect')) {
       connectResource(cmd.replace('/connect', ''));
       startPrompt();
@@ -628,7 +687,13 @@ function startPrompt() {
       }
 
       if (registry.mcp && registry.mcp[mcpName]) {
-        handleChat(userPrompt, { type: 'mcp', name: mcpName, target: registry.mcp[mcpName].target });
+        handleChat(userPrompt, {
+          type: 'mcp',
+          name: mcpName,
+          target: registry.mcp[mcpName].target,
+          mcpType: registry.mcp[mcpName].type,
+          authToken: registry.mcp[mcpName].authToken
+        });
       } else {
         console.log(`${C.red}[x] MCP "${mcpName}" tidak ditemukan di registry. Ketik /mcp untuk melihat daftar.${C.reset}\n`);
         startPrompt();
