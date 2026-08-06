@@ -29,7 +29,8 @@ const C = {
   yellow: '\x1b[38;2;234;179;8m',
   red: '\x1b[38;2;239;68;68m',
   gray: '\x1b[38;2;148;163;184m',
-  darkGray: '\x1b[38;2;71;85;105m'
+  darkGray: '\x1b[38;2;71;85;105m',
+  bold: '\x1b[1m'
 };
 
 const PROVIDERS = {
@@ -65,6 +66,19 @@ function saveRegistry(registry) {
   fs.writeFileSync(REGISTRY_FILE, JSON.stringify(registry, null, 2));
 }
 
+// UI Popup Card Helper
+function drawBox(title, contentLines, borderColor = C.cyan) {
+  const width = 60;
+  console.log(`${borderColor}┌${'─'.repeat(width - 2)}┐${C.reset}`);
+  console.log(`${borderColor}│ ${C.bold}${title.padEnd(width - 4)}${C.reset}${borderColor} │${C.reset}`);
+  console.log(`${borderColor}├${'─'.repeat(width - 2)}┤${C.reset}`);
+  contentLines.forEach(line => {
+    // Basic text padding layout
+    console.log(`${borderColor}│${C.reset} ${line.padEnd(width - 4)} ${borderColor}│${C.reset}`);
+  });
+  console.log(`${borderColor}└${'─'.repeat(width - 2)}┘${C.reset}`);
+}
+
 let rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 let config = loadConfig();
 let registry = loadRegistry();
@@ -79,13 +93,13 @@ ${C.c3}   ██║   ██║╚██╔╝██║██╔═══╝ █
 ${C.c4}   ██║   ██║ ╚═╝ ██║██║     ██║  ██║${C.reset}
 ${C.c4}   ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
- ${C.reset}The Multi Platform AI ${C.green}[Interactive Mode + Multi-Location Scanner]${C.reset}
+ ${C.reset}The Multi Platform AI ${C.green}[Interactive Popup UI Engine]${C.reset}
  ${C.gray}/config | /models | /skill | /mcp | /connect | /scan | /exit${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
 `);
 }
 
-// System Prompt Builder for Skills and MCPs
+// System Context Builder
 function getActiveToolsContext() {
   let contextParts = [];
   
@@ -110,35 +124,66 @@ function getActiveToolsContext() {
   if (contextParts.length === 0) return "";
 
   return "\n\n[SYSTEM CONTEXT: ACTIVE TOOLS & PROTOCOLS]\n" + contextParts.join("\n") +
-         "\nIf you need to execute a connected JS skill or run local tools, specify standard instructions or output [EXEC_TOOL: tool_name(params)].\n";
+         "\nIf user wants to execute a skill/MCP, assist them using available tools.\n";
 }
 
-// Handlers for Skills and MCP
+// Handlers for Skills with Popup Helper
 function listSkills() {
   console.log(`\n${C.cyan}=== Registered Skills ===${C.reset}`);
   const keys = Object.keys(registry.skills || {});
+  
   if (keys.length === 0) {
-    console.log(`${C.gray}Belum ada skill yang terhubung. Gunakan ${C.yellow}/connect skill <path>${C.gray} atau ${C.yellow}/scan${C.gray} untuk memindai.${C.reset}\n`);
+    console.log(`${C.gray}Belum ada skill terhubung. Ketik ${C.yellow}/scan${C.gray} atau ${C.yellow}/connect skill <path>${C.reset}\n`);
     return;
   }
+
   keys.forEach((name, i) => {
     const item = registry.skills[name];
-    console.log(` ${C.yellow}${i + 1}.${C.reset} ${C.green}${name}${C.reset} -> ${C.gray}${item.path}${C.reset} [${item.status || 'Active'}]`);
+    console.log(` ${C.yellow}${i + 1}.${C.reset} ${C.green}${name}${C.reset} -> ${C.gray}${item.path}${C.reset}`);
   });
+  console.log('');
+
+  // Interactive Action Helper Popup
+  const sampleSkill = keys[0] || 'nama_skill';
+  drawBox("💡 CARA MENGGUNAKAN SKILL TERDAFTAR", [
+    `${C.bold}Perintah yang Bisa Kamu Ketik di Chat:${C.reset}`,
+    ` 1. Langsung minta AI panggil skill:`,
+    `    ${C.yellow}TMPA > "Jalankan skill ${sampleSkill}"${C.reset}`,
+    ` 2. Tanya fungsi skill:`,
+    `    ${C.yellow}TMPA > "Apa kegunaan dari skill ${sampleSkill}?"${C.reset}`,
+    ` 3. Hubungkan file JS baru:`,
+    `    ${C.yellow}TMPA > /connect skill ./path/ke/file.js${C.reset}`
+  ], C.c1);
   console.log('');
 }
 
+// Handlers for MCP with Popup Helper
 function listMCP() {
   console.log(`\n${C.cyan}=== Registered MCP (Model Context Protocol) Servers ===${C.reset}`);
   const keys = Object.keys(registry.mcp || {});
+
   if (keys.length === 0) {
-    console.log(`${C.gray}Belum ada MCP server terhubung. Gunakan ${C.yellow}/connect mcp <target>${C.gray} atau ${C.yellow}/scan${C.gray} untuk memindai.${C.reset}\n`);
+    console.log(`${C.gray}Belum ada MCP server terhubung. Ketik ${C.yellow}/scan${C.gray} atau ${C.yellow}/connect mcp <target>${C.reset}\n`);
     return;
   }
+
   keys.forEach((name, i) => {
     const item = registry.mcp[name];
-    console.log(` ${C.yellow}${i + 1}.${C.reset} ${C.green}${name}${C.reset} -> ${C.gray}${item.target}${C.reset} [${item.type || 'local'}]`);
+    console.log(` ${C.yellow}${i + 1}.${C.reset} ${C.green}${name}${C.reset} -> ${C.gray}${item.target}${C.reset} [${item.type}]`);
   });
+  console.log('');
+
+  // Interactive Action Helper Popup
+  const sampleMcp = keys[0] || 'filesystem';
+  drawBox("⚡ CARA MENGGUNAKAN MCP SERVER", [
+    `${C.bold}Perintah & Integrasi yang Bisa Kamu Gunakan:${C.reset}`,
+    ` 1. Minta AI akses fitur MCP:`,
+    `    ${C.yellow}TMPA > "Gunakan MCP ${sampleMcp} untuk analisis data"${C.reset}`,
+    ` 2. Hubungkan MCP via URL / HTTP SSE:`,
+    `    ${C.yellow}TMPA > /connect mcp http://localhost:3000/sse${C.reset}`,
+    ` 3. Pindai server MCP otomatis:`,
+    `    ${C.yellow}TMPA > /scan${C.reset}`
+  ], C.c4);
   console.log('');
 }
 
@@ -165,7 +210,7 @@ function connectResource(inputArgs) {
       status: 'Active'
     };
     saveRegistry(registry);
-    console.log(`${C.green}[+] Skill "${skillName}" berhasil dihubungkan dari: ${resolvedPath}${C.reset}\n`);
+    console.log(`${C.green}[+] Skill "${skillName}" berhasil terhubung!${C.reset}\n`);
   } else if (type === 'mcp') {
     const mcpName = path.basename(resolvedPath, path.extname(resolvedPath));
     registry.mcp = registry.mcp || {};
@@ -176,31 +221,26 @@ function connectResource(inputArgs) {
       status: 'Connected'
     };
     saveRegistry(registry);
-    console.log(`${C.green}[+] MCP Server "${mcpName}" berhasil dihubungkan!${C.reset}\n`);
+    console.log(`${C.green}[+] MCP Server "${mcpName}" berhasil terhubung!${C.reset}\n`);
   } else {
     console.log(`${C.red}[x] Tipe tidak dikenal. Gunakan "skill" atau "mcp".${C.reset}\n`);
   }
 }
 
-// Deep Multi-Location Scanner Function
+// Deep Multi-Location Scanner Function with Result Popup Card
 function scanResources() {
-  console.log(`${C.yellow}[...] Memindai folder internal & lokasi umum pengguna (Gemini/Claude/System)...${C.reset}`);
+  console.log(`\n${C.yellow}[...] Memindai lokasi internal, home user, Gemini CLI & Claude Desktop...${C.reset}`);
   registry = loadRegistry();
   registry.skills = registry.skills || {};
   registry.mcp = registry.mcp || {};
 
   const home = os.homedir();
   const searchTargets = [
-    // Folder Internal TMPA
     { type: 'skill', dir: SKILLS_DIR },
     { type: 'mcp', dir: MCP_DIR },
-    
-    // Folder Umum Pengguna (Direct Home Directory)
     { type: 'skill', dir: path.join(home, 'skills') },
     { type: 'mcp', dir: path.join(home, 'mcp') },
     { type: 'mcp', dir: path.join(home, '.mcp') },
-
-    // Folder Konfigurasi Gemini CLI & Claude Desktop
     { type: 'skill', dir: path.join(home, '.gemini', 'skills') },
     { type: 'mcp', dir: path.join(home, '.gemini', 'mcp') },
     { type: 'skill', dir: path.join(home, '.config', 'gemini', 'skills') },
@@ -209,7 +249,7 @@ function scanResources() {
     { type: 'mcp', dir: path.join(home, '.config', 'claude', 'mcp') }
   ];
 
-  let addedCount = 0;
+  let newDetected = [];
 
   searchTargets.forEach(({ type, dir }) => {
     if (fs.existsSync(dir)) {
@@ -219,28 +259,40 @@ function scanResources() {
           const fullPath = path.join(dir, item);
           const name = path.basename(item, path.extname(item));
 
-          if (type === 'skill') {
-            if (!registry.skills[name]) {
-              registry.skills[name] = { path: fullPath, connectedAt: new Date().toISOString(), status: 'Active' };
-              console.log(`${C.green}[+] Terdeteksi Skill: ${name}${C.reset} ${C.gray}(${fullPath})${C.reset}`);
-              addedCount++;
-            }
-          } else if (type === 'mcp') {
-            if (!registry.mcp[name]) {
-              registry.mcp[name] = { target: fullPath, type: 'local', connectedAt: new Date().toISOString(), status: 'Connected' };
-              console.log(`${C.green}[+] Terdeteksi MCP: ${name}${C.reset} ${C.gray}(${fullPath})${C.reset}`);
-              addedCount++;
-            }
+          if (type === 'skill' && !registry.skills[name]) {
+            registry.skills[name] = { path: fullPath, connectedAt: new Date().toISOString(), status: 'Active' };
+            newDetected.push(`[Skill] ${name}`);
+          } else if (type === 'mcp' && !registry.mcp[name]) {
+            registry.mcp[name] = { target: fullPath, type: 'local', connectedAt: new Date().toISOString(), status: 'Connected' };
+            newDetected.push(`[MCP] ${name}`);
           }
         });
-      } catch (e) {
-        // Skip folder jika permission terikat
-      }
+      } catch (e) {}
     }
   });
 
   saveRegistry(registry);
-  console.log(`${C.green}[+] Pemindaian selesai. Total item baru terdeteksi: ${addedCount}${C.reset}\n`);
+
+  console.log(`${C.green}[+] Pemindaian selesai.${C.reset}\n`);
+
+  // POPUP CARD SUMMARY FOR SCAN RESULTS
+  if (newDetected.length > 0) {
+    drawBox("🎉 ITEM BARU BERHASIL DITEMUKAN!", [
+      `${C.green}Berhasil menambahkan ${newDetected.length} resource baru:${C.reset}`,
+      ...newDetected.slice(0, 4).map(item => ` • ${item}`),
+      newDetected.length > 4 ? ` ...dan ${newDetected.length - 4} item lainnya.` : '',
+      ``,
+      `${C.yellow}Ketik /skill atau /mcp untuk melihat daftar lengkap!${C.reset}`
+    ], C.green);
+  } else {
+    drawBox("ℹ️ HASIL PEMINDAIAN", [
+      `Tidak ada file Skill atau MCP baru yang terdeteksi.`,
+      `Semua resource sudah terhubung di registry.`,
+      ``,
+      `Gunakan ${C.yellow}/skill${C.reset} atau ${C.yellow}/mcp${C.reset} untuk melihat item aktif.`
+    ], C.gray);
+  }
+  console.log('');
 }
 
 function askConfig(callback) {
