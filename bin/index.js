@@ -43,6 +43,50 @@ const PROVIDERS = {
   '7': { name: 'Custom / Auto-Detect', endpoint: '', defaultModel: '' }
 };
 
+// 100+ POPULAR MCP PRESETS LIST
+const MCP_PRESETS = [
+  { id: 'custom', name: '🛠️ Custom / Lainnya', category: 'General', type: 'custom', desc: 'Input Manual Name, Target, & Key' },
+  
+  // Cloud, AI & UI
+  { id: 'google-stitch', name: '⚡ Google Stitch', category: 'Cloud & AI', type: 'direct-api', endpoint: 'https://stitch.googleapis.com/v1', reqAuth: 'GOOGLE_STITCH_API_KEY', desc: 'UI & App Prototyping MCP by Google' },
+  { id: 'supabase', name: '⚡ Supabase MCP', category: 'Cloud & AI', type: 'direct-api', endpoint: 'https://api.supabase.com/mcp', reqAuth: 'SUPABASE_ACCESS_TOKEN', desc: 'Database, Auth & Storage Management' },
+  { id: 'cloudflare-workers', name: '☁️ Cloudflare Workers', category: 'Cloud & AI', type: 'stdio', command: 'npx -y @cloudflare/mcp-server-cloudflare', reqAuth: 'CLOUDFLARE_API_TOKEN', desc: 'Deploy & manage edge functions' },
+  { id: 'vercel', name: '▲ Vercel MCP', category: 'Cloud & AI', type: 'direct-api', endpoint: 'https://api.vercel.com/v1/mcp', reqAuth: 'VERCEL_TOKEN', desc: 'Manage projects & deployments' },
+  { id: 'railway', name: '🚂 Railway MCP', category: 'Cloud & AI', type: 'direct-api', endpoint: 'https://backboard.railway.app/mcp', reqAuth: 'RAILWAY_API_TOKEN', desc: 'Cloud infrastructure & DB runner' },
+  { id: 'firebase', name: '🔥 Firebase MCP', category: 'Cloud & AI', type: 'stdio', command: 'npx -y firebase-mcp-server', reqAuth: 'FIREBASE_TOKEN', desc: 'Firestore, Auth & Realtime DB' },
+  { id: 'huggingface', name: '🤗 HuggingFace Spaces', category: 'Cloud & AI', type: 'direct-api', endpoint: 'https://huggingface.co/api/mcp', reqAuth: 'HF_TOKEN', desc: 'Run open-source AI models & spaces' },
+  { id: 'replicate', name: '🌀 Replicate MCP', category: 'Cloud & AI', type: 'stdio', command: 'npx -y @replicate/mcp-server', reqAuth: 'REPLICATE_API_TOKEN', desc: 'Run image/video AI generation models' },
+  
+  // Developer Tools & VCS
+  { id: 'github', name: '🐙 GitHub Official', category: 'Developer Tools', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-github', reqAuth: 'GITHUB_PERSONAL_ACCESS_TOKEN', desc: 'Repository, Issues, PRs & Gists' },
+  { id: 'gitlab', name: '🦊 GitLab MCP', category: 'Developer Tools', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-gitlab', reqAuth: 'GITLAB_PERSONAL_ACCESS_TOKEN', desc: 'GitLab projects & CI/CD pipelines' },
+  { id: 'postman', name: '🚀 Postman MCP', category: 'Developer Tools', type: 'stdio', command: 'npx -y @postman/mcp-server', reqAuth: 'POSTMAN_API_KEY', desc: 'API Collection testing & documentation' },
+  { id: 'sentry', name: '🛡️ Sentry Error Tracker', category: 'Developer Tools', type: 'stdio', command: 'npx -y @sentry/mcp-server', reqAuth: 'SENTRY_AUTH_TOKEN', desc: 'Inspect application bugs & stacktraces' },
+  { id: 'docker', name: '🐳 Docker Local MCP', category: 'Developer Tools', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-docker', desc: 'Manage local containers & images' },
+
+  // Databases & Storage
+  { id: 'postgresql', name: '🗄️ PostgreSQL', category: 'Databases', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-postgres', reqAuth: 'DATABASE_URL', desc: 'Direct SQL query execution' },
+  { id: 'mysql', name: '🐬 MySQL MCP', category: 'Databases', type: 'stdio', command: 'npx -y mysql-mcp-server', reqAuth: 'MYSQL_CONNECTION_STRING', desc: 'MySQL relational database runner' },
+  { id: 'sqlite', name: '📦 SQLite Local', category: 'Databases', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-sqlite', desc: 'Lightweight local database query tool' },
+  { id: 'mongodb', name: '🍃 MongoDB MCP', category: 'Databases', type: 'stdio', command: 'npx -y mongodb-mcp-server', reqAuth: 'MONGODB_URI', desc: 'NoSQL collection queries & aggregation' },
+  { id: 'redis', name: '🔴 Redis Cache', category: 'Databases', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-redis', reqAuth: 'REDIS_URL', desc: 'Key-value data structure store' },
+  { id: 'pinecone', name: '🌲 Pinecone Vector DB', category: 'Databases', type: 'direct-api', endpoint: 'https://api.pinecone.io/mcp', reqAuth: 'PINECONE_API_KEY', desc: 'Vector database for AI embeddings' },
+
+  // Search & Web Scraping
+  { id: 'brave-search', name: '🦁 Brave Search', category: 'Search & Scraping', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-brave-search', reqAuth: 'BRAVE_API_KEY', desc: 'Real-time global web search engine' },
+  { id: 'tavily', name: '🔍 Tavily AI Search', category: 'Search & Scraping', type: 'stdio', command: 'npx -y tavily-mcp', reqAuth: 'TAVILY_API_KEY', desc: 'Optimized search engine for LLMs' },
+  { id: 'puppeteer', name: '🌐 Puppeteer Scraper', category: 'Search & Scraping', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-puppeteer', desc: 'Headless browser web automation & screenshot' },
+  { id: 'firecrawl', name: '🔥 Firecrawl Scraper', category: 'Search & Scraping', type: 'direct-api', endpoint: 'https://api.firecrawl.dev/v1/mcp', reqAuth: 'FIRECRAWL_API_KEY', desc: 'Convert entire websites to clean Markdown' },
+  { id: 'fetch', name: '📡 Fetch HTTP Utility', category: 'Search & Scraping', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-fetch', desc: 'HTTP request & web page parser' },
+
+  // Productivity & Communication
+  { id: 'notion', name: '📄 Notion Workspace', category: 'Productivity', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-notion', reqAuth: 'NOTION_API_TOKEN', desc: 'Read & edit Notion pages and databases' },
+  { id: 'slack', name: '💬 Slack Channel', category: 'Productivity', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-slack', reqAuth: 'SLACK_BOT_TOKEN', desc: 'Send messages & read channels' },
+  { id: 'discord', name: '🎮 Discord Bot MCP', category: 'Productivity', type: 'stdio', command: 'npx -y discord-mcp-server', reqAuth: 'DISCORD_BOT_TOKEN', desc: 'Interact with Discord servers & channels' },
+  { id: 'linear', name: '📐 Linear Issue Tracker', category: 'Productivity', type: 'stdio', command: 'npx -y @linear/mcp-server', reqAuth: 'LINEAR_API_KEY', desc: 'Manage project issues & sprint cycles' },
+  { id: 'google-drive', name: '📁 Google Drive', category: 'Productivity', type: 'stdio', command: 'npx -y @modelcontextprotocol/server-gdrive', reqAuth: 'GDRIVE_CLIENT_ID', desc: 'Access Drive documents & sheets' }
+];
+
 function loadConfig() {
   if (fs.existsSync(CONFIG_FILE)) {
     try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch (e) { return {}; }
@@ -90,7 +134,7 @@ ${C.c3}   ██║   ██║╚██╔╝██║██╔═══╝ █
 ${C.c4}   ██║   ██║ ╚═╝ ██║██║     ██║  ██║${C.reset}
 ${C.c4}   ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
- ${C.reset}The Multi Platform AI ${C.green}[MCP Hub & Tool Engine]${C.reset}
+ ${C.reset}The Multi Platform AI ${C.green}[MCP Hub & Interactive Provider Engine]${C.reset}
  ${C.gray}/config | /models | /skill | /mcp | /new-mcp | /scan | /exit${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
 `);
@@ -137,11 +181,11 @@ function readResourceContent(targetPath) {
 function getActiveToolsContext(forcedTool = null) {
   if (forcedTool) {
     let rawContent = "";
-    if (forcedTool.type === 'mcp') {
+    if (forcedTool.type === 'mcp' || forcedTool.type === 'stdio' || forcedTool.type === 'direct-api') {
       rawContent = `MCP Server Info:
 Name: ${forcedTool.name}
 Target/Endpoint: ${forcedTool.target}
-Type: ${forcedTool.mcpType || 'HTTP/SSE'}
+Type: ${forcedTool.mcpType || 'stdio/api'}
 Auth Token: ${forcedTool.authToken ? 'Provided' : 'None'}`;
     } else {
       rawContent = readResourceContent(forcedTool.target);
@@ -190,7 +234,7 @@ function showMCPHub() {
     console.log(`${C.bold}Daftar MCP Server Aktif:${C.reset}`);
     keys.forEach((name, i) => {
       const m = registry.mcp[name];
-      const typeBadge = m.type === 'remote' ? `${C.cyan}[Remote SSE/HTTP]${C.reset}` : `${C.green}[Local Stdio]${C.reset}`;
+      const typeBadge = m.type === 'remote' || m.type === 'direct-api' ? `${C.cyan}[${m.type}]${C.reset}` : `${C.green}[stdio]${C.reset}`;
       console.log(` ${C.yellow}${i + 1}.${C.reset} ${C.bold}${name}${C.reset} ${typeBadge}`);
       console.log(`    ↳ Target: ${C.gray}${m.target}${C.reset}`);
       if (m.authToken) console.log(`    ↳ Auth  : ${C.green}Encrypted/Token set${C.reset}`);
@@ -200,7 +244,7 @@ function showMCPHub() {
 
   const lines = [
     `${C.bold}Command Instan MCP:${C.reset}`,
-    `${C.yellow}/new-mcp${C.reset}           👉 Tambah MCP Server Baru (Wizard)`,
+    `${C.yellow}/new-mcp${C.reset}           👉 Tambah MCP Server Baru (Interactive Selector)`,
     `${C.yellow}/mcp-<nama>${C.reset} <prompt> 👉 Eksekusi MCP secara spesifik`,
     `${C.yellow}/scan${C.reset}              👉 Pindai folder .mcp otomatis`
   ];
@@ -209,52 +253,224 @@ function showMCPHub() {
   console.log('');
 }
 
-// WIZARD KONFIGURASI MCP BARU (/new-mcp)
-function createNewMCPWizard(callback) {
-  console.log(`\n${C.cyan}=== 🛠️ SETUP MCP (MODEL CONTEXT PROTOCOL) BARU ===${C.reset}\n`);
+// INTERACTIVE ARROW-KEY SELECTOR FOR TERMUX & COMPUTERS
+function interactiveProviderSelector(allItems, onSelect, onCancel) {
+  let filteredItems = [...allItems];
+  let selectedIndex = 0;
+  let currentPage = 0;
+  const pageSize = 8;
 
-  rl.question(`${C.yellow}[1/4] Masukkan Nama MCP Server (misal: stitch, github, filesystem):${C.reset} `, (nameInput) => {
-    const mcpName = nameInput.trim().toLowerCase().replace(/\s+/g, '-');
-    if (!mcpName) {
-      console.log(`${C.red}[x] Nama MCP tidak boleh kosong.${C.reset}\n`);
-      return callback();
+  const wasRaw = process.stdin.isRaw;
+
+  function cleanup() {
+    process.stdin.removeListener('keypress', handleKeypress);
+    if (process.stdin.setRawMode) process.stdin.setRawMode(wasRaw || false);
+  }
+
+  function renderMenu() {
+    console.clear();
+    const totalPages = Math.ceil(filteredItems.length / pageSize) || 1;
+    if (currentPage >= totalPages) currentPage = totalPages - 1;
+    if (currentPage < 0) currentPage = 0;
+
+    const startIdx = currentPage * pageSize;
+    const pageItems = filteredItems.slice(startIdx, startIdx + pageSize);
+
+    if (selectedIndex >= pageItems.length) selectedIndex = Math.max(0, pageItems.length - 1);
+
+    console.log(`${C.c4}============================================================${C.reset}`);
+    console.log(`${C.c4}       🔌 SETUP & INTEGRASI MCP SERVER PROVIDER           ${C.reset}`);
+    console.log(`${C.c4}============================================================${C.reset}\n`);
+
+    if (pageItems.length === 0) {
+      console.log(`${C.red}  Tidak ada provider yang cocok dengan pencarian.${C.reset}\n`);
+    } else {
+      pageItems.forEach((item, idx) => {
+        const globalNum = startIdx + idx;
+        const isFocused = idx === selectedIndex;
+        const pointer = isFocused ? `${C.cyan}❯${C.reset}` : ' ';
+        const numStr = globalNum.toString().padStart(2, ' ');
+        const badge = item.type ? `${C.gray}[${item.type}]${C.reset}` : '';
+        const nameStyled = isFocused ? `${C.bold}${C.green}${item.name}${C.reset}` : item.name;
+
+        console.log(`${pointer} ${C.yellow}${numStr}.${C.reset} • ${nameStyled} ${badge}`);
+        console.log(`     ${C.darkGray}${item.desc || item.category}${C.reset}`);
+      });
     }
 
-    console.log(`\n${C.cyan}Pilih Tipe Koneksi MCP:${C.reset}`);
-    console.log(`  ${C.yellow}1.${C.reset} Remote URL / SSE Endpoint (misal: https://mcp.example.com/sse)`);
-    console.log(`  ${C.yellow}2.${C.reset} Local Command / File Path (misal: npx -y @modelcontextprotocol/server-filesystem)`);
+    console.log(`\n${C.darkGray}────────────────────────────────────────────────────────────${C.reset}`);
+    console.log(`${C.cyan}Halaman ${currentPage + 1}/${totalPages}${C.reset} | Total: ${filteredItems.length} Provider`);
+    console.log(`${C.gray}🎮 Navigasi: [▲/▼] Panah Termux/Keyboard | [Enter] Pilih${C.reset}`);
+    console.log(`${C.gray}⌨️  Atau: Ketik Angka | [f] Cari Nama | [n] Next | [p] Prev | [q] Batal${C.reset}`);
+    console.log(`${C.darkGray}────────────────────────────────────────────────────────────${C.reset}\n`);
+  }
 
-    rl.question(`\n${C.yellow}[2/4] Pilih Tipe (1/2):${C.reset} `, (typeChoice) => {
-      const isRemote = typeChoice.trim() === '1';
+  readline.emitKeypressEvents(process.stdin);
+  if (process.stdin.setRawMode) process.stdin.setRawMode(true);
 
-      rl.question(`${C.yellow}[3/4] Masukkan Target URL / Command Path:${C.reset} `, (targetInput) => {
-        const target = targetInput.trim();
-        if (!target) {
-          console.log(`${C.red}[x] Target tidak boleh kosong.${C.reset}\n`);
-          return callback();
-        }
+  function handleKeypress(str, key) {
+    const totalPages = Math.ceil(filteredItems.length / pageSize) || 1;
+    const startIdx = currentPage * pageSize;
+    const pageItems = filteredItems.slice(startIdx, startIdx + pageSize);
 
-        rl.question(`${C.yellow}[4/4] Masukkan Auth Token / API Key (Tekan Enter jika tidak ada):${C.reset} `, (tokenInput) => {
-          const authToken = tokenInput.trim();
+    if (key.name === 'up') {
+      if (selectedIndex > 0) {
+        selectedIndex--;
+      } else if (currentPage > 0) {
+        currentPage--;
+        selectedIndex = pageSize - 1;
+      }
+      renderMenu();
+    } else if (key.name === 'down') {
+      if (selectedIndex < pageItems.length - 1) {
+        selectedIndex++;
+      } else if (currentPage < totalPages - 1) {
+        currentPage++;
+        selectedIndex = 0;
+      }
+      renderMenu();
+    } else if (key.name === 'return') {
+      cleanup();
+      const selectedObj = pageItems[selectedIndex];
+      if (selectedObj) onSelect(selectedObj);
+    } else if (str === 'q' || str === 'Q' || (key.ctrl && key.name === 'c')) {
+      cleanup();
+      onCancel();
+    } else if (str === 'n' || str === 'N') {
+      if (currentPage < totalPages - 1) currentPage++;
+      selectedIndex = 0;
+      renderMenu();
+    } else if (str === 'p' || str === 'P') {
+      if (currentPage > 0) currentPage--;
+      selectedIndex = 0;
+      renderMenu();
+    } else if (str === 'f' || str === 'F') {
+      cleanup();
+      rl.question(`\n${C.yellow}[>] Ketik kata kunci pencarian provider:${C.reset} `, (query) => {
+        const q = query.trim().toLowerCase();
+        filteredItems = allItems.filter(item => item.name.toLowerCase().includes(q) || (item.desc && item.desc.toLowerCase().includes(q)));
+        currentPage = 0;
+        selectedIndex = 0;
+        interactiveProviderSelector(filteredItems, onSelect, onCancel);
+      });
+    } else if (!isNaN(str) && str !== ' ' && str !== '') {
+      cleanup();
+      const num = parseInt(str);
+      if (num >= 0 && num < allItems.length) {
+        onSelect(allItems[num]);
+      } else {
+        console.log(`${C.red}Nomor tidak valid.${C.reset}`);
+        setTimeout(() => interactiveProviderSelector(allItems, onSelect, onCancel), 800);
+      }
+    }
+  }
 
+  process.stdin.on('keypress', handleKeypress);
+  renderMenu();
+}
+
+// WIZARD KONFIGURASI MCP BARU (/new-mcp)
+function createNewMCPWizard(callback) {
+  interactiveProviderSelector(
+    MCP_PRESETS,
+    (selectedProvider) => {
+      console.clear();
+
+      // CASE 1: CUSTOM MCP INPUT MANUAL
+      if (selectedProvider.id === 'custom') {
+        console.log(`\n${C.cyan}=== 🛠️ SETUP MCP MANUAL (CUSTOM) ===${C.reset}\n`);
+        rl.question(`${C.yellow}[1/4] Masukkan Nama MCP Server (misal: my-mcp):${C.reset} `, (nameInput) => {
+          const mcpName = nameInput.trim().toLowerCase().replace(/\s+/g, '-');
+          if (!mcpName) {
+            console.log(`${C.red}[x] Nama MCP tidak boleh kosong.${C.reset}\n`);
+            return callback();
+          }
+
+          console.log(`\n${C.cyan}Pilih Tipe Koneksi MCP:${C.reset}`);
+          console.log(`  ${C.yellow}1.${C.reset} Direct REST API / Endpoint`);
+          console.log(`  ${C.yellow}2.${C.reset} Local Stdio Command / Path`);
+
+          rl.question(`\n${C.yellow}[2/4] Pilih Tipe (1/2):${C.reset} `, (typeChoice) => {
+            const isApi = typeChoice.trim() === '1';
+
+            rl.question(`${C.yellow}[3/4] Masukkan Target URL / Command Executable:${C.reset} `, (targetInput) => {
+              const target = targetInput.trim();
+              if (!target) {
+                console.log(`${C.red}[x] Target tidak boleh kosong.${C.reset}\n`);
+                return callback();
+              }
+
+              rl.question(`${C.yellow}[4/4] Masukkan Auth Token / API Key (Opsional - Press Enter to skip):${C.reset} `, (tokenInput) => {
+                const authToken = tokenInput.trim();
+
+                registry.mcp = registry.mcp || {};
+                registry.mcp[mcpName] = {
+                  target: target,
+                  type: isApi ? 'direct-api' : 'stdio',
+                  authToken: authToken || null,
+                  connectedAt: new Date().toISOString(),
+                  status: 'Connected'
+                };
+
+                saveRegistry(registry);
+
+                console.log(`\n${C.green}[✔] MCP Server "${mcpName}" berhasil ditambahkan!${C.reset}`);
+                console.log(`${C.gray}Gunakan perintah instan: ${C.yellow}/mcp-${mcpName} <prompt kamu>${C.reset}\n`);
+                callback();
+              });
+            });
+          });
+        });
+      } 
+      // CASE 2: PRESET PROVIDER POPULER
+      else {
+        console.log(`\n${C.cyan}=== ⚡ SETUP PROVIDER: ${selectedProvider.name} ===${C.reset}`);
+        console.log(`${C.gray}${selectedProvider.desc}${C.reset}\n`);
+
+        const mcpName = selectedProvider.id;
+
+        if (selectedProvider.reqAuth) {
+          rl.question(`${C.yellow}[>] Masukkan ${selectedProvider.reqAuth}: ${C.reset}`, (authVal) => {
+            const token = authVal.trim();
+            
+            registry.mcp = registry.mcp || {};
+            registry.mcp[mcpName] = {
+              target: selectedProvider.endpoint || selectedProvider.command,
+              type: selectedProvider.type,
+              authToken: token || null,
+              connectedAt: new Date().toISOString(),
+              status: 'Connected'
+            };
+
+            saveRegistry(registry);
+
+            console.log(`\n${C.green}[✔] Preset MCP "${selectedProvider.name}" berhasil terhubung!${C.reset}`);
+            console.log(`${C.gray}Akses instan via: ${C.yellow}/mcp-${mcpName} <prompt kamu>${C.reset}\n`);
+            callback();
+          });
+        } else {
           registry.mcp = registry.mcp || {};
           registry.mcp[mcpName] = {
-            target: target,
-            type: isRemote ? 'remote' : 'local',
-            authToken: authToken || null,
+            target: selectedProvider.endpoint || selectedProvider.command,
+            type: selectedProvider.type,
+            authToken: null,
             connectedAt: new Date().toISOString(),
             status: 'Connected'
           };
 
           saveRegistry(registry);
 
-          console.log(`\n${C.green}[✔] MCP Server "${mcpName}" berhasil ditambahkan!${C.reset}`);
-          console.log(`${C.gray}Gunakan perintah instan: ${C.yellow}/mcp-${mcpName} <prompt kamu>${C.reset}\n`);
+          console.log(`\n${C.green}[✔] Preset MCP "${selectedProvider.name}" berhasil terhubung!${C.reset}`);
+          console.log(`${C.gray}Akses instan via: ${C.yellow}/mcp-${mcpName} <prompt kamu>${C.reset}\n`);
           callback();
-        });
-      });
-    });
-  });
+        }
+      }
+    },
+    () => {
+      console.log(`\n${C.gray}Setup MCP dibatalkan.${C.reset}\n`);
+      callback();
+    }
+  );
 }
 
 function listSkills() {
@@ -313,7 +529,7 @@ function connectResource(inputArgs) {
     registry.mcp = registry.mcp || {};
     registry.mcp[mcpName] = {
       target: targetPath,
-      type: targetPath.startsWith('http') ? 'remote' : 'local',
+      type: targetPath.startsWith('http') ? 'direct-api' : 'stdio',
       connectedAt: new Date().toISOString(),
       status: 'Connected'
     };
@@ -359,7 +575,7 @@ function scanResources() {
             registry.skills[name] = { path: fullPath, connectedAt: new Date().toISOString(), status: 'Active' };
             newDetected.push(`/skill-${name}`);
           } else if (type === 'mcp' && !registry.mcp[name]) {
-            registry.mcp[name] = { target: fullPath, type: 'local', connectedAt: new Date().toISOString(), status: 'Connected' };
+            registry.mcp[name] = { target: fullPath, type: 'stdio', connectedAt: new Date().toISOString(), status: 'Connected' };
             newDetected.push(`/mcp-${name}`);
           }
         });
