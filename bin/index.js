@@ -79,7 +79,7 @@ ${C.c3}   ██║   ██║╚██╔╝██║██╔═══╝ █
 ${C.c4}   ██║   ██║ ╚═╝ ██║██║     ██║  ██║${C.reset}
 ${C.c4}   ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
- ${C.reset}The Multi Platform AI ${C.green}[Interactive Mode + Tool Runner]${C.reset}
+ ${C.reset}The Multi Platform AI ${C.green}[Interactive Mode + Multi-Location Scanner]${C.reset}
  ${C.gray}/config | /models | /skill | /mcp | /connect | /scan | /exit${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
 `);
@@ -89,7 +89,6 @@ ${C.darkGray}──────────────────────�
 function getActiveToolsContext() {
   let contextParts = [];
   
-  // Skills Context
   const activeSkills = Object.keys(registry.skills || {});
   if (activeSkills.length > 0) {
     contextParts.push("AVAILABLE SKILLS:");
@@ -99,7 +98,6 @@ function getActiveToolsContext() {
     });
   }
 
-  // MCP Context
   const activeMCP = Object.keys(registry.mcp || {});
   if (activeMCP.length > 0) {
     contextParts.push("AVAILABLE MCP SERVERS:");
@@ -120,7 +118,7 @@ function listSkills() {
   console.log(`\n${C.cyan}=== Registered Skills ===${C.reset}`);
   const keys = Object.keys(registry.skills || {});
   if (keys.length === 0) {
-    console.log(`${C.gray}Belum ada skill yang terhubung. Gunakan ${C.yellow}/connect skill <path>${C.gray} untuk menghubungkan.${C.reset}\n`);
+    console.log(`${C.gray}Belum ada skill yang terhubung. Gunakan ${C.yellow}/connect skill <path>${C.gray} atau ${C.yellow}/scan${C.gray} untuk memindai.${C.reset}\n`);
     return;
   }
   keys.forEach((name, i) => {
@@ -134,7 +132,7 @@ function listMCP() {
   console.log(`\n${C.cyan}=== Registered MCP (Model Context Protocol) Servers ===${C.reset}`);
   const keys = Object.keys(registry.mcp || {});
   if (keys.length === 0) {
-    console.log(`${C.gray}Belum ada MCP server terhubung. Gunakan ${C.yellow}/connect mcp <target>${C.gray} untuk menghubungkan.${C.reset}\n`);
+    console.log(`${C.gray}Belum ada MCP server terhubung. Gunakan ${C.yellow}/connect mcp <target>${C.gray} atau ${C.yellow}/scan${C.gray} untuk memindai.${C.reset}\n`);
     return;
   }
   keys.forEach((name, i) => {
@@ -184,36 +182,65 @@ function connectResource(inputArgs) {
   }
 }
 
+// Deep Multi-Location Scanner Function
 function scanResources() {
-  console.log(`${C.yellow}[...] Memindai folder ~/.tmpa/skills dan ~/.tmpa/mcp...${C.reset}`);
+  console.log(`${C.yellow}[...] Memindai folder internal & lokasi umum pengguna (Gemini/Claude/System)...${C.reset}`);
   registry = loadRegistry();
+  registry.skills = registry.skills || {};
+  registry.mcp = registry.mcp || {};
 
-  if (fs.existsSync(SKILLS_DIR)) {
-    const files = fs.readdirSync(SKILLS_DIR);
-    files.forEach(file => {
-      const fullPath = path.join(SKILLS_DIR, file);
-      const name = path.basename(file, path.extname(file));
-      if (!registry.skills[name]) {
-        registry.skills[name] = { path: fullPath, connectedAt: new Date().toISOString(), status: 'Active' };
-        console.log(`${C.green}[+] Auto-detected skill: ${name}${C.reset}`);
-      }
-    });
-  }
+  const home = os.homedir();
+  const searchTargets = [
+    // Folder Internal TMPA
+    { type: 'skill', dir: SKILLS_DIR },
+    { type: 'mcp', dir: MCP_DIR },
+    
+    // Folder Umum Pengguna (Direct Home Directory)
+    { type: 'skill', dir: path.join(home, 'skills') },
+    { type: 'mcp', dir: path.join(home, 'mcp') },
+    { type: 'mcp', dir: path.join(home, '.mcp') },
 
-  if (fs.existsSync(MCP_DIR)) {
-    const files = fs.readdirSync(MCP_DIR);
-    files.forEach(file => {
-      const fullPath = path.join(MCP_DIR, file);
-      const name = path.basename(file, path.extname(file));
-      if (!registry.mcp[name]) {
-        registry.mcp[name] = { target: fullPath, type: 'local', connectedAt: new Date().toISOString(), status: 'Connected' };
-        console.log(`${C.green}[+] Auto-detected MCP: ${name}${C.reset}`);
+    // Folder Konfigurasi Gemini CLI & Claude Desktop
+    { type: 'skill', dir: path.join(home, '.gemini', 'skills') },
+    { type: 'mcp', dir: path.join(home, '.gemini', 'mcp') },
+    { type: 'skill', dir: path.join(home, '.config', 'gemini', 'skills') },
+    { type: 'mcp', dir: path.join(home, '.config', 'gemini', 'mcp') },
+    { type: 'mcp', dir: path.join(home, '.claude', 'mcp') },
+    { type: 'mcp', dir: path.join(home, '.config', 'claude', 'mcp') }
+  ];
+
+  let addedCount = 0;
+
+  searchTargets.forEach(({ type, dir }) => {
+    if (fs.existsSync(dir)) {
+      try {
+        const items = fs.readdirSync(dir);
+        items.forEach(item => {
+          const fullPath = path.join(dir, item);
+          const name = path.basename(item, path.extname(item));
+
+          if (type === 'skill') {
+            if (!registry.skills[name]) {
+              registry.skills[name] = { path: fullPath, connectedAt: new Date().toISOString(), status: 'Active' };
+              console.log(`${C.green}[+] Terdeteksi Skill: ${name}${C.reset} ${C.gray}(${fullPath})${C.reset}`);
+              addedCount++;
+            }
+          } else if (type === 'mcp') {
+            if (!registry.mcp[name]) {
+              registry.mcp[name] = { target: fullPath, type: 'local', connectedAt: new Date().toISOString(), status: 'Connected' };
+              console.log(`${C.green}[+] Terdeteksi MCP: ${name}${C.reset} ${C.gray}(${fullPath})${C.reset}`);
+              addedCount++;
+            }
+          }
+        });
+      } catch (e) {
+        // Skip folder jika permission terikat
       }
-    });
-  }
+    }
+  });
 
   saveRegistry(registry);
-  console.log(`${C.green}[+] Pemindaian selesai.${C.reset}\n`);
+  console.log(`${C.green}[+] Pemindaian selesai. Total item baru terdeteksi: ${addedCount}${C.reset}\n`);
 }
 
 function askConfig(callback) {
@@ -382,7 +409,6 @@ async function handleChat(prompt) {
     let headers = { 'Content-Type': 'application/json' };
     let bodyData = {};
 
-    // Combine User Prompt + Active Tools Context
     const toolsContext = getActiveToolsContext();
     const fullPrompt = prompt + toolsContext;
 
@@ -422,11 +448,6 @@ async function handleChat(prompt) {
     }
 
     console.log(`\n${C.c1}TMPA CLI (${config.model || 'AI'}) :${C.reset} ${aiResponse}\n`);
-
-    // Check if AI requested execution of a local tool/skill
-    if (aiResponse.includes('[EXEC_TOOL:')) {
-      console.log(`${C.cyan}[+] Detected Tool Execution Request from AI...${C.reset}`);
-    }
 
   } catch (error) {
     console.log(`\n${C.red}[x] Fetch Error: ${error.message}${C.reset}\n`);
