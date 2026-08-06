@@ -273,8 +273,7 @@ function listSkills() {
   console.log('');
 
   const lines = [
-    `${C.bold}Perintah Instan Skill:${C.reset}`,
-    ``
+    `${C.bold}Perintah Instan Skill:${C.reset}`
   ];
 
   keys.forEach(name => {
@@ -584,19 +583,22 @@ async function handleChat(prompt, forcedTool = null) {
     const data = await response.json();
 
     let aiResponse = "";
-    if (data.choices && data.choices[0]?.message?.content) {
-      aiResponse = data.choices[0].message.content;
+
+    // DUKUNGAN UNTUK REASONING MODELS & STANDAR OPENAI/GEMINI
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      const msg = data.choices[0].message;
+      aiResponse = msg.content || msg.reasoning || msg.reasoning_content || "";
     } else if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
       aiResponse = data.candidates[0].content.parts[0].text;
-    } else if (data.error) {
-      console.log(`\n${C.red}[x] API Error: ${data.error.message || JSON.stringify(data.error)}${C.reset}\n`);
-      return startPrompt();
-    } else {
-      console.log(`\n${C.red}[x] Response: ${JSON.stringify(data)}${C.reset}\n`);
-      return startPrompt();
     }
 
-    console.log(`\n${C.c1}TMPA CLI (${config.model || 'AI'}) :${C.reset}\n${aiResponse}\n`);
+    if (aiResponse) {
+      console.log(`\n${C.c1}TMPA CLI (${config.model || 'AI'}) :${C.reset}\n${aiResponse}\n`);
+    } else if (data.error) {
+      console.log(`\n${C.red}[x] API Error: ${data.error.message || JSON.stringify(data.error)}${C.reset}\n`);
+    } else {
+      console.log(`\n${C.red}[x] Response Unrecognized: ${JSON.stringify(data)}${C.reset}\n`);
+    }
 
   } catch (error) {
     console.log(`\n${C.red}[x] Fetch Error: ${error.message}${C.reset}\n`);
