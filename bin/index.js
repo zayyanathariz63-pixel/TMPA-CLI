@@ -4,14 +4,16 @@ const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { execSync } = require('child_process');
+const { execSync, spawn } = require('child_process');
 
+// Base Paths
 const TMPA_DIR = path.join(os.homedir(), '.tmpa');
 const SKILLS_DIR = path.join(TMPA_DIR, 'skills');
 const MCP_DIR = path.join(TMPA_DIR, 'mcp');
 const CONFIG_FILE = path.join(os.homedir(), '.tmpa_config.json');
 const REGISTRY_FILE = path.join(TMPA_DIR, 'registry.json');
 
+// Ensure directories exist
 if (!fs.existsSync(TMPA_DIR)) fs.mkdirSync(TMPA_DIR, { recursive: true });
 if (!fs.existsSync(SKILLS_DIR)) fs.mkdirSync(SKILLS_DIR, { recursive: true });
 if (!fs.existsSync(MCP_DIR)) fs.mkdirSync(MCP_DIR, { recursive: true });
@@ -40,6 +42,7 @@ const PROVIDERS = {
   '7': { name: 'Custom / Auto-Detect', endpoint: '', defaultModel: '' }
 };
 
+// Config & Registry Helpers
 function loadConfig() {
   if (fs.existsSync(CONFIG_FILE)) {
     try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch (e) { return {}; }
@@ -76,10 +79,141 @@ ${C.c3}   ██║   ██║╚██╔╝██║██╔═══╝ █
 ${C.c4}   ██║   ██║ ╚═╝ ██║██║     ██║  ██║${C.reset}
 ${C.c4}   ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
- ${C.reset}The Multi Platform AI ${C.green}[Interactive Mode]${C.reset}
+ ${C.reset}The Multi Platform AI ${C.green}[Interactive Mode + Tool Runner]${C.reset}
  ${C.gray}/config | /models | /skill | /mcp | /connect | /scan | /exit${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
 `);
+}
+
+// System Prompt Builder for Skills and MCPs
+function getActiveToolsContext() {
+  let contextParts = [];
+  
+  // Skills Context
+  const activeSkills = Object.keys(registry.skills || {});
+  if (activeSkills.length > 0) {
+    contextParts.push("AVAILABLE SKILLS:");
+    activeSkills.forEach(name => {
+      const s = registry.skills[name];
+      contextParts.push(`- Skill: ${name} (Path: ${s.path})`);
+    });
+  }
+
+  // MCP Context
+  const activeMCP = Object.keys(registry.mcp || {});
+  if (activeMCP.length > 0) {
+    contextParts.push("AVAILABLE MCP SERVERS:");
+    activeMCP.forEach(name => {
+      const m = registry.mcp[name];
+      contextParts.push(`- MCP Server: ${name} (Target: ${m.target}, Type: ${m.type})`);
+    });
+  }
+
+  if (contextParts.length === 0) return "";
+
+  return "\n\n[SYSTEM CONTEXT: ACTIVE TOOLS & PROTOCOLS]\n" + contextParts.join("\n") +
+         "\nIf you need to execute a connected JS skill or run local tools, specify standard instructions or output [EXEC_TOOL: tool_name(params)].\n";
+}
+
+// Handlers for Skills and MCP
+function listSkills() {
+  console.log(`\n${C.cyan}=== Registered Skills ===${C.reset}`);
+  const keys = Object.keys(registry.skills || {});
+  if (keys.length === 0) {
+    console.log(`${C.gray}Belum ada skill yang terhubung. Gunakan ${C.yellow}/connect skill <path>${C.gray} untuk menghubungkan.${C.reset}\n`);
+    return;
+  }
+  keys.forEach((name, i) => {
+    const item = registry.skills[name];
+    console.log(` ${C.yellow}${i + 1}.${C.reset} ${C.green}${name}${C.reset} -> ${C.gray}${item.path}${C.reset} [${item.status || 'Active'}]`);
+  });
+  console.log('');
+}
+
+function listMCP() {
+  console.log(`\n${C.cyan}=== Registered MCP (Model Context Protocol) Servers ===${C.reset}`);
+  const keys = Object.keys(registry.mcp || {});
+  if (keys.length === 0) {
+    console.log(`${C.gray}Belum ada MCP server terhubung. Gunakan ${C.yellow}/connect mcp <target>${C.gray} untuk menghubungkan.${C.reset}\n`);
+    return;
+  }
+  keys.forEach((name, i) => {
+    const item = registry.mcp[name];
+    console.log(` ${C.yellow}${i + 1}.${C.reset} ${C.green}${name}${C.reset} -> ${C.gray}${item.target}${C.reset} [${item.type || 'local'}]`);
+  });
+  console.log('');
+}
+
+function connectResource(inputArgs) {
+  const parts = inputArgs.trim().split(/\s+/);
+  const type = parts[0]?.toLowerCase();
+  const targetPath = parts.slice(1).join(' ');
+
+  if (!type || !targetPath) {
+    console.log(`${C.red}[x] Format salah! Gunakan:${C.reset}`);
+    console.log(`  ${C.yellow}/connect skill <filepath_atau_folder>${C.reset}`);
+    console.log(`  ${C.yellow}/connect mcp <filepath_atau_url>${C.reset}\n`);
+    return;
+  }
+
+  const resolvedPath = path.resolve(targetPath);
+
+  if (type === 'skill') {
+    const skillName = path.basename(resolvedPath, path.extname(resolvedPath));
+    registry.skills = registry.skills || {};
+    registry.skills[skillName] = {
+      path: resolvedPath,
+      connectedAt: new Date().toISOString(),
+      status: 'Active'
+    };
+    saveRegistry(registry);
+    console.log(`${C.green}[+] Skill "${skillName}" berhasil dihubungkan dari: ${resolvedPath}${C.reset}\n`);
+  } else if (type === 'mcp') {
+    const mcpName = path.basename(resolvedPath, path.extname(resolvedPath));
+    registry.mcp = registry.mcp || {};
+    registry.mcp[mcpName] = {
+      target: targetPath,
+      type: targetPath.startsWith('http') ? 'remote' : 'local',
+      connectedAt: new Date().toISOString(),
+      status: 'Connected'
+    };
+    saveRegistry(registry);
+    console.log(`${C.green}[+] MCP Server "${mcpName}" berhasil dihubungkan!${C.reset}\n`);
+  } else {
+    console.log(`${C.red}[x] Tipe tidak dikenal. Gunakan "skill" atau "mcp".${C.reset}\n`);
+  }
+}
+
+function scanResources() {
+  console.log(`${C.yellow}[...] Memindai folder ~/.tmpa/skills dan ~/.tmpa/mcp...${C.reset}`);
+  registry = loadRegistry();
+
+  if (fs.existsSync(SKILLS_DIR)) {
+    const files = fs.readdirSync(SKILLS_DIR);
+    files.forEach(file => {
+      const fullPath = path.join(SKILLS_DIR, file);
+      const name = path.basename(file, path.extname(file));
+      if (!registry.skills[name]) {
+        registry.skills[name] = { path: fullPath, connectedAt: new Date().toISOString(), status: 'Active' };
+        console.log(`${C.green}[+] Auto-detected skill: ${name}${C.reset}`);
+      }
+    });
+  }
+
+  if (fs.existsSync(MCP_DIR)) {
+    const files = fs.readdirSync(MCP_DIR);
+    files.forEach(file => {
+      const fullPath = path.join(MCP_DIR, file);
+      const name = path.basename(file, path.extname(file));
+      if (!registry.mcp[name]) {
+        registry.mcp[name] = { target: fullPath, type: 'local', connectedAt: new Date().toISOString(), status: 'Connected' };
+        console.log(`${C.green}[+] Auto-detected MCP: ${name}${C.reset}`);
+      }
+    });
+  }
+
+  saveRegistry(registry);
+  console.log(`${C.green}[+] Pemindaian selesai.${C.reset}\n`);
 }
 
 function askConfig(callback) {
@@ -248,9 +382,13 @@ async function handleChat(prompt) {
     let headers = { 'Content-Type': 'application/json' };
     let bodyData = {};
 
+    // Combine User Prompt + Active Tools Context
+    const toolsContext = getActiveToolsContext();
+    const fullPrompt = prompt + toolsContext;
+
     if (url.includes('googleapis.com')) {
       url = `${url}?key=${config.apiKey}`;
-      bodyData = { contents: [{ parts: [{ text: prompt }] }] };
+      bodyData = { contents: [{ parts: [{ text: fullPrompt }] }] };
     } else {
       if (!url.endsWith('/chat/completions')) {
         url = `${url.replace(/\/$/, '')}/chat/completions`;
@@ -258,7 +396,7 @@ async function handleChat(prompt) {
       headers['Authorization'] = `Bearer ${config.apiKey}`;
       bodyData = {
         model: config.model || 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: prompt }]
+        messages: [{ role: 'user', content: fullPrompt }]
       };
     }
 
@@ -270,15 +408,26 @@ async function handleChat(prompt) {
 
     const data = await response.json();
 
+    let aiResponse = "";
     if (data.choices && data.choices[0]?.message?.content) {
-      console.log(`\n${C.c1}TMPA CLI (${config.model || 'AI'}) :${C.reset} ${data.choices[0].message.content}\n`);
+      aiResponse = data.choices[0].message.content;
     } else if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-      console.log(`\n${C.c1}TMPA CLI :${C.reset} ${data.candidates[0].content.parts[0].text}\n`);
+      aiResponse = data.candidates[0].content.parts[0].text;
     } else if (data.error) {
       console.log(`\n${C.red}[x] API Error: ${data.error.message || JSON.stringify(data.error)}${C.reset}\n`);
+      return startPrompt();
     } else {
       console.log(`\n${C.red}[x] Response: ${JSON.stringify(data)}${C.reset}\n`);
+      return startPrompt();
     }
+
+    console.log(`\n${C.c1}TMPA CLI (${config.model || 'AI'}) :${C.reset} ${aiResponse}\n`);
+
+    // Check if AI requested execution of a local tool/skill
+    if (aiResponse.includes('[EXEC_TOOL:')) {
+      console.log(`${C.cyan}[+] Detected Tool Execution Request from AI...${C.reset}`);
+    }
+
   } catch (error) {
     console.log(`\n${C.red}[x] Fetch Error: ${error.message}${C.reset}\n`);
   }
@@ -309,106 +458,6 @@ function handleUninstall() {
   });
 }
 
-function listSkills() {
-  console.log(`\n${C.cyan}=== Registered Skills ===${C.reset}`);
-  const keys = Object.keys(registry.skills || {});
-  if (keys.length === 0) {
-    console.log(`${C.gray}Belum ada skill yang terhubung. Gunakan ${C.yellow}/connect skill <path>${C.gray} untuk menghubungkan.${C.reset}\n`);
-    return;
-  }
-  keys.forEach((name, i) => {
-    const item = registry.skills[name];
-    console.log(` ${C.yellow}${i + 1}.${C.reset} ${C.green}${name}${C.reset} -> ${C.gray}${item.path}${C.reset} [${item.status || 'Active'}]`);
-  });
-  console.log('');
-}
-
-function listMCP() {
-  console.log(`\n${C.cyan}=== Registered MCP (Model Context Protocol) Servers ===${C.reset}`);
-  const keys = Object.keys(registry.mcp || {});
-  if (keys.length === 0) {
-    console.log(`${C.gray}Belum ada MCP server terhubung. Gunakan ${C.yellow}/connect mcp <target>${C.gray} untuk menghubungkan.${C.reset}\n`);
-    return;
-  }
-  keys.forEach((name, i) => {
-    const item = registry.mcp[name];
-    console.log(` ${C.yellow}${i + 1}.${C.reset} ${C.green}${name}${C.reset} -> ${C.gray}${item.target}${C.reset} [${item.type || 'local'}]`);
-  });
-  console.log('');
-}
-
-function connectResource(inputArgs) {
-  const parts = inputArgs.trim().split(/\s+/);
-  const type = parts[0]?.toLowerCase();
-  const targetPath = parts.slice(1).join(' ');
-
-  if (!type || !targetPath) {
-    console.log(`${C.red}[x] Format salah! Gunakan:${C.reset}`);
-    console.log(`  ${C.yellow}/connect skill <filepath_atau_folder>${C.reset}`);
-    console.log(`  ${C.yellow}/connect mcp <filepath_atau_url>${C.reset}\n`);
-    return;
-  }
-
-  const resolvedPath = path.resolve(targetPath);
-
-  if (type === 'skill') {
-    const skillName = path.basename(resolvedPath, path.extname(resolvedPath));
-    registry.skills = registry.skills || {};
-    registry.skills[skillName] = {
-      path: resolvedPath,
-      connectedAt: new Date().toISOString(),
-      status: 'Active'
-    };
-    saveRegistry(registry);
-    console.log(`${C.green}[+] Skill "${skillName}" berhasil dihubungkan dari: ${resolvedPath}${C.reset}\n`);
-  } else if (type === 'mcp') {
-    const mcpName = path.basename(resolvedPath, path.extname(resolvedPath));
-    registry.mcp = registry.mcp || {};
-    registry.mcp[mcpName] = {
-      target: targetPath,
-      type: targetPath.startsWith('http') ? 'remote' : 'local',
-      connectedAt: new Date().toISOString(),
-      status: 'Connected'
-    };
-    saveRegistry(registry);
-    console.log(`${C.green}[+] MCP Server "${mcpName}" berhasil dihubungkan!${C.reset}\n`);
-  } else {
-    console.log(`${C.red}[x] Tipe tidak dikenal. Gunakan "skill" atau "mcp".${C.reset}\n`);
-  }
-}
-
-function scanResources() {
-  console.log(`${C.yellow}[...] Memindai folder ~/.tmpa/skills dan ~/.tmpa/mcp...${C.reset}`);
-  registry = loadRegistry();
-
-  if (fs.existsSync(SKILLS_DIR)) {
-    const files = fs.readdirSync(SKILLS_DIR);
-    files.forEach(file => {
-      const fullPath = path.join(SKILLS_DIR, file);
-      const name = path.basename(file, path.extname(file));
-      if (!registry.skills[name]) {
-        registry.skills[name] = { path: fullPath, connectedAt: new Date().toISOString(), status: 'Active' };
-        console.log(`${C.green}[+] Auto-detected skill: ${name}${C.reset}`);
-      }
-    });
-  }
-
-  if (fs.existsSync(MCP_DIR)) {
-    const files = fs.readdirSync(MCP_DIR);
-    files.forEach(file => {
-      const fullPath = path.join(MCP_DIR, file);
-      const name = path.basename(file, path.extname(file));
-      if (!registry.mcp[name]) {
-        registry.mcp[name] = { target: fullPath, type: 'local', connectedAt: new Date().toISOString(), status: 'Connected' };
-        console.log(`${C.green}[+] Auto-detected MCP: ${name}${C.reset}`);
-      }
-    });
-  }
-
-  saveRegistry(registry);
-  console.log(`${C.green}[+] Pemindaian selesai.${C.reset}\n`);
-}
-
 function startPrompt() {
   rl.question(`${C.c1}TMPA >${C.reset} `, (input) => {
     const cmd = input.trim();
@@ -423,7 +472,7 @@ function startPrompt() {
       askConfig(() => startPrompt());
     } else if (cmd === '/models') {
       fetchAvailableModels();
-    } else if (cmd === '/skill') {
+    } else if (cmd === '/skill' || cmd === '/skills') {
       listSkills();
       startPrompt();
     } else if (cmd === '/mcp') {
