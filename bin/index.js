@@ -135,7 +135,7 @@ ${C.c4}   ██║   ██║ ╚═╝ ██║██║     ██║  █�
 ${C.c4}   ╚═╝   ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
  ${C.reset}The Multi Platform AI ${C.green}[MCP Hub & Interactive Provider Engine]${C.reset}
- ${C.gray}/config | /models | /skill | /mcp | /new-mcp | /scan | /exit${C.reset}
+ ${C.gray}/config | /models | /skill | /mcp | /new-mcp | /scan | /uninstall | /exit${C.reset}
 ${C.darkGray}────────────────────────────────────────────────────────────${C.reset}
 `);
 }
@@ -253,7 +253,7 @@ function showMCPHub() {
   console.log('');
 }
 
-// INTERACTIVE ARROW-KEY SELECTOR FOR TERMUX & COMPUTERS
+// INTERACTIVE ARROW-KEY SELECTOR UNTUK MCP PROVIDERS
 function interactiveProviderSelector(allItems, onSelect, onCancel) {
   let filteredItems = [...allItems];
   let selectedIndex = 0;
@@ -362,6 +362,115 @@ function interactiveProviderSelector(allItems, onSelect, onCancel) {
         console.log(`${C.red}Nomor tidak valid.${C.reset}`);
         setTimeout(() => interactiveProviderSelector(allItems, onSelect, onCancel), 800);
       }
+    }
+  }
+
+  process.stdin.on('keypress', handleKeypress);
+  renderMenu();
+}
+
+// INTERACTIVE ARROW-KEY SELECTOR UNTUK MODEL AI (/models)
+function interactiveModelSelector(allModels, onSelect, onCancel) {
+  let filteredModels = [...allModels];
+  let selectedIndex = 0;
+  let currentPage = 0;
+  const pageSize = 10;
+
+  const wasRaw = process.stdin.isRaw;
+
+  function cleanup() {
+    process.stdin.removeListener('keypress', handleKeypress);
+    if (process.stdin.setRawMode) process.stdin.setRawMode(wasRaw || false);
+  }
+
+  function renderMenu() {
+    console.clear();
+    const totalPages = Math.ceil(filteredModels.length / pageSize) || 1;
+    if (currentPage >= totalPages) currentPage = totalPages - 1;
+    if (currentPage < 0) currentPage = 0;
+
+    const startIdx = currentPage * pageSize;
+    const pageItems = filteredModels.slice(startIdx, startIdx + pageSize);
+
+    if (selectedIndex >= pageItems.length) selectedIndex = Math.max(0, pageItems.length - 1);
+
+    console.log(`${C.c1}============================================================${C.reset}`);
+    console.log(`${C.c1}       🤖 PILIH MODEL AI (${config.provider || 'Provider'})             ${C.reset}`);
+    console.log(`${C.c1}============================================================${C.reset}`);
+    console.log(`${C.gray}Model Aktif Saat Ini: ${C.green}${config.model || 'Belum Diatur'}${C.reset}\n`);
+
+    if (pageItems.length === 0) {
+      console.log(`${C.red}  Tidak ada model yang cocok dengan pencarian.${C.reset}\n`);
+    } else {
+      pageItems.forEach((m, idx) => {
+        const globalNum = startIdx + idx;
+        const isFocused = idx === selectedIndex;
+        const isCurrentActive = m.id === config.model;
+        
+        const pointer = isFocused ? `${C.cyan}❯${C.reset}` : ' ';
+        const activeBadge = isCurrentActive ? `${C.green}(Aktif)${C.reset}` : '';
+        const numStr = globalNum.toString().padStart(3, ' ');
+        const modelNameStyled = isFocused ? `${C.bold}${C.yellow}${m.id}${C.reset}` : m.id;
+
+        console.log(`${pointer} ${C.gray}${numStr}.${C.reset} • ${modelNameStyled} ${activeBadge}`);
+      });
+    }
+
+    console.log(`\n${C.darkGray}────────────────────────────────────────────────────────────${C.reset}`);
+    console.log(`${C.cyan}Halaman ${currentPage + 1}/${totalPages}${C.reset} | Total: ${filteredModels.length} Model AI`);
+    console.log(`${C.gray}🎮 Navigasi: [▲/▼] Panah Termux/Keyboard | [Enter] Pilih${C.reset}`);
+    console.log(`${C.gray}⌨️  Atau: [f] Cari Nama Model | [n] Next | [p] Prev | [q] Batal${C.reset}`);
+    console.log(`${C.darkGray}────────────────────────────────────────────────────────────${C.reset}\n`);
+  }
+
+  readline.emitKeypressEvents(process.stdin);
+  if (process.stdin.setRawMode) process.stdin.setRawMode(true);
+
+  function handleKeypress(str, key) {
+    const totalPages = Math.ceil(filteredModels.length / pageSize) || 1;
+    const startIdx = currentPage * pageSize;
+    const pageItems = filteredModels.slice(startIdx, startIdx + pageSize);
+
+    if (key.name === 'up') {
+      if (selectedIndex > 0) {
+        selectedIndex--;
+      } else if (currentPage > 0) {
+        currentPage--;
+        selectedIndex = pageSize - 1;
+      }
+      renderMenu();
+    } else if (key.name === 'down') {
+      if (selectedIndex < pageItems.length - 1) {
+        selectedIndex++;
+      } else if (currentPage < totalPages - 1) {
+        currentPage++;
+        selectedIndex = 0;
+      }
+      renderMenu();
+    } else if (key.name === 'return') {
+      cleanup();
+      const selectedModelObj = pageItems[selectedIndex];
+      if (selectedModelObj) onSelect(selectedModelObj.id);
+    } else if (str === 'q' || str === 'Q' || (key.ctrl && key.name === 'c')) {
+      cleanup();
+      onCancel();
+    } else if (str === 'n' || str === 'N') {
+      if (currentPage < totalPages - 1) currentPage++;
+      selectedIndex = 0;
+      renderMenu();
+    } else if (str === 'p' || str === 'P') {
+      if (currentPage > 0) currentPage--;
+      selectedIndex = 0;
+      renderMenu();
+    } else if (str === 'f' || str === 'F') {
+      cleanup();
+      rl.question(`\n${C.yellow}[>] Ketik kata kunci nama model (misal: llama, gemini, claude):${C.reset} `, (query) => {
+        const q = query.trim().toLowerCase();
+        filteredModels = allModels.filter(m => m.id.toLowerCase().includes(q));
+        currentPage = 0;
+        selectedIndex = 0;
+        interactiveModelSelector(filteredModels, onSelect, onCancel);
+      });
     }
   }
 
@@ -642,81 +751,6 @@ function askConfig(callback) {
   });
 }
 
-function selectModelCLI(allModels) {
-  let filteredModels = [...allModels];
-  let currentPage = 0;
-  const pageSize = 12;
-
-  function displayList() {
-    console.clear();
-    const totalPages = Math.ceil(filteredModels.length / pageSize) || 1;
-    if (currentPage >= totalPages) currentPage = totalPages - 1;
-    if (currentPage < 0) currentPage = 0;
-
-    const startIdx = currentPage * pageSize;
-    const pageItems = filteredModels.slice(startIdx, startIdx + pageSize);
-
-    console.log(`${C.cyan}=== Models Selector for ${config.provider} (${filteredModels.length} models) ===${C.reset}`);
-    console.log(`${C.gray}Current Active: ${C.green}${config.model || 'None'}${C.reset}`);
-    console.log(`${C.darkGray}────────────────────────────────────────────────────────────${C.reset}`);
-
-    if (pageItems.length === 0) {
-      console.log(`${C.red} No models found matching filter.${C.reset}`);
-    } else {
-      pageItems.forEach((m, idx) => {
-        const itemNum = startIdx + idx + 1;
-        const isCurrent = m.id === config.model;
-        const bullet = isCurrent ? `${C.green}●${C.reset}` : `${C.gray}○${C.reset}`;
-        console.log(` ${bullet} ${C.yellow}${itemNum.toString().padStart(3, ' ')}.${C.reset} ${m.id}`);
-      });
-    }
-
-    console.log(`${C.darkGray}────────────────────────────────────────────────────────────${C.reset}`);
-    console.log(`${C.cyan}Page ${currentPage + 1}/${totalPages}${C.reset} | ${C.gray}Commands: [n]ext | [p]rev | [f]ilter <keyword> | [q]uit${C.reset}`);
-
-    rl.question(`\n${C.yellow}[>] Enter Number / Model ID / Command:${C.reset} `, (answer) => {
-      const input = answer.trim();
-
-      if (input.toLowerCase() === 'n') {
-        if (currentPage < totalPages - 1) currentPage++;
-        displayList();
-      } else if (input.toLowerCase() === 'p') {
-        if (currentPage > 0) currentPage--;
-        displayList();
-      } else if (input.toLowerCase() === 'q' || input.toLowerCase() === 'exit') {
-        console.log(`${C.gray}Model selection cancelled.${C.reset}\n`);
-        startPrompt();
-      } else if (input.toLowerCase().startsWith('f ')) {
-        const query = input.slice(2).trim().toLowerCase();
-        filteredModels = allModels.filter(m => m.id.toLowerCase().includes(query));
-        currentPage = 0;
-        displayList();
-      } else if (!isNaN(input) && input !== '') {
-        const num = parseInt(input);
-        if (num >= 1 && num <= filteredModels.length) {
-          const selected = filteredModels[num - 1].id;
-          config.model = selected;
-          saveConfig(config);
-          console.log(`\n${C.green}[+] Model changed to: ${config.model}${C.reset}\n`);
-          startPrompt();
-        } else {
-          console.log(`${C.red}[x] Invalid number!${C.reset}`);
-          setTimeout(displayList, 1000);
-        }
-      } else if (input.length > 0) {
-        config.model = input;
-        saveConfig(config);
-        console.log(`\n${C.green}[+] Custom Model ID set to: ${config.model}${C.reset}\n`);
-        startPrompt();
-      } else {
-        startPrompt();
-      }
-    });
-  }
-
-  displayList();
-}
-
 async function fetchAvailableModels() {
   if (!config.apiKey) {
     console.log(`${C.red}[x] API Key is not set. Use /config first.${C.reset}\n`);
@@ -745,7 +779,21 @@ async function fetchAvailableModels() {
     const data = await response.json();
 
     if (data.data && Array.isArray(data.data) && data.data.length > 0) {
-      selectModelCLI(data.data);
+      interactiveModelSelector(
+        data.data,
+        (selectedModelId) => {
+          config.model = selectedModelId;
+          saveConfig(config);
+          console.clear();
+          console.log(`${C.green}[✔] Model berhasil diubah ke: ${config.model}${C.reset}\n`);
+          startPrompt();
+        },
+        () => {
+          console.clear();
+          console.log(`${C.gray}Pemilihan model dibatalkan.${C.reset}\n`);
+          startPrompt();
+        }
+      );
     } else {
       console.log(`${C.red}[x] Could not retrieve models list automatically from ${config.provider}.${C.reset}`);
       startPrompt();
@@ -824,23 +872,23 @@ async function handleChat(prompt, forcedTool = null) {
 }
 
 function handleUninstall() {
-  rl.question(`${C.red}[!] Are you sure you want to uninstall TMPA CLI? (y/N):${C.reset} `, (answer) => {
+  rl.question(`${C.red}[!] Apakah kamu yakin ingin menghapus TMPA CLI? (y/N):${C.reset} `, (answer) => {
     if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
-      console.log(`\n${C.yellow}[...] Removing TMPA CLI and cleaning configuration...${C.reset}`);
+      console.log(`\n${C.yellow}[...] Membersihkan konfigurasi dan menghapus TMPA CLI...${C.reset}`);
       try {
         if (fs.existsSync(CONFIG_FILE)) {
           fs.unlinkSync(CONFIG_FILE);
         }
-        console.log(`${C.green}[+] Local configuration cleared.${C.reset}`);
+        console.log(`${C.green}[+] Konfigurasi lokal berhasil dibersihkan.${C.reset}`);
         execSync('npm uninstall -g tmpa-cli', { stdio: 'inherit' });
-        console.log(`\n${C.green}[+] TMPA CLI uninstalled successfully. Goodbye!${C.reset}\n`);
+        console.log(`\n${C.green}[+] TMPA CLI berhasil di-uninstall sepenuhnya. Sampai jumpa!${C.reset}\n`);
         process.exit(0);
       } catch (err) {
-        console.log(`\n${C.red}[x] Failed to uninstall automatically. Run: npm uninstall -g tmpa-cli manually.${C.reset}\n`);
+        console.log(`\n${C.red}[x] Gagal uninstall otomatis. Silakan jalankan: npm uninstall -g tmpa-cli secara manual.${C.reset}\n`);
         process.exit(0);
       }
     } else {
-      console.log(`${C.gray}Uninstall process cancelled.${C.reset}\n`);
+      console.log(`${C.gray}Proses uninstall dibatalkan.${C.reset}\n`);
       startPrompt();
     }
   });
